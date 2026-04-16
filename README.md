@@ -1,3 +1,3 @@
 
-# Repostory für die Veranstaltung Ausgewählte Softwaresysteme SoSe2026
+# Repository für die Veranstaltung Ausgewählte Softwaresysteme SoSe2026
 
