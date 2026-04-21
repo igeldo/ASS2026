@@ -35,6 +35,9 @@ class Person:
     def __str__(self):                  # entspricht toString() in Java
         return f"Person({self.name}, {self.alter} Jahre)"
 
+    def __repr__(self):                 # __repr__ sollte eine Darstellung liefern, mit der man das Objekt idealerweise neu erzeugen könnte: Person("Anna", 22)
+        return f"Person('{self.name}', {self.alter})"
+
 
 # -----------------------------------------------------------------------------
 # 2. SICHTBARKEIT: KONVENTION STATT ERZWINGUNG
