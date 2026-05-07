@@ -1,0 +1,29 @@
+services:
+  db:
+    container_name: db
+    image: postgres:17.4-bookworm
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=java-starter
+      - POSTGRES_PASSWORD=passGeheim
+      - POSTGRES_DB=person
+  idm:
+    container_name: idm
+    image: quay.io/keycloak/keycloak:26.1.4
+    entrypoint: [ "opt/keycloak/bin/kc.sh", "start-dev", "--import-realm" ]
+    ports:
+      - 8081:8080
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=passKeycloakAdmin
+  java-starter:
+    container_name: java-starter
+    image: java-starter:latest
+    depends_on:
+      - db
+      - idm
+    ports:
+      - 8080:8080
