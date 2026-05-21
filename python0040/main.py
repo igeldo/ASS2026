@@ -8,5 +8,8 @@ logging.basicConfig(
 )
 
 if __name__ == "__main__":
-    HelloWorld("World").run()
-    HelloWorld("Python").run()
+    hello_world = HelloWorld("World")
+    hello_world.run()
+
+    hello_python = HelloWorld("Python")
+    hello_python.run()

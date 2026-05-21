@@ -4,7 +4,7 @@ import logging
 class HelloWorld:
     _log = logging.getLogger(__qualname__)
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name:str) -> None:
         self._name = name
 
     def greeting(self) -> str:
