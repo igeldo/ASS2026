@@ -1,0 +1,6 @@
+[project]
+name = "python0030"
+version = "0.1.0"
+description = "Logging mit dem Python Standard-Logging-Modul"
+requires-python = ">=3.12"
+dependencies = []
