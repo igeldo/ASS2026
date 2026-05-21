@@ -1,0 +1,11 @@
+[project]
+name = "python0050"
+version = "0.1.0"
+description = "Service-Klassen mit ABC"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=2.1.0",
+]
