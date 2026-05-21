@@ -1,6 +1,7 @@
-def main():
-    print("Hello, World!")
+class HelloWorld:
+    def run(self):
+        print("Hello, World!")
 
 
 if __name__ == "__main__":
-    main()
+    HelloWorld().run()
