@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:$PATH"
+
+if git diff --cached --name-only | grep -q "^python0040/.*\.py$"; then
+    echo "mypy: Prüfe Typen in python0040..."
+    cd python0040
+    uv run mypy .
+    EXIT_CODE=$?
+    cd ..
+    if [ $EXIT_CODE -ne 0 ]; then
+        echo "mypy hat Typfehler gefunden. Commit abgebrochen."
+        exit 1
+    fi
+fi

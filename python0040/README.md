@@ -81,6 +81,31 @@ uv sync
 uv run python main.py
 ```
 
+### mypy manuell ausführen
+
+```shell
+cd python0040
+uv run mypy .
+```
+
+### Pre-commit-Hook einrichten (einmalig pro Entwickler)
+
+Der Hook im Verzeichnis `.githooks/` läuft automatisch vor jedem `git commit` und verhindert den Commit, wenn mypy Typfehler meldet.
+
+Einmalig nach dem Klonen des Repositories ausführen:
+
+```shell
+git config core.hooksPath .githooks
+```
+
+Danach wird `mypy` bei jedem Commit automatisch ausgeführt — kein weiterer Einrichtungsschritt nötig.
+
+Testen:
+
+```shell
+git commit --allow-empty -m "test"
+```
+
 Erwartete Ausgabe:
 
 ```
