@@ -1,0 +1,21 @@
+[project]
+name = "python0100"
+version = "0.1.0"
+description = "Mocking in Tests mit pytest-mock"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=0.28.0",
+    "mypy>=2.1.0",
+    "pytest>=8.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
