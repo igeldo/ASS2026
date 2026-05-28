@@ -1,17 +1,7 @@
-import logging
-
 from fastapi import FastAPI
 
 from greeter_service import GreeterService
-
-_log = logging.getLogger(__name__)
+from hello_world_router import HelloWorldRouter
 
 app = FastAPI()
-_greeter = GreeterService()
-
-
-@app.get("/api/hello")
-def say_hello() -> str:
-    message = _greeter.greet("World")
-    _log.info("response: %s", message)
-    return message
+app.include_router(HelloWorldRouter(GreeterService()).router)
