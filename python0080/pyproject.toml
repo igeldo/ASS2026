@@ -1,0 +1,20 @@
+[project]
+name = "python0080"
+version = "0.1.0"
+description = "FastAPI: Query-Parameter, Path-Variable, POST"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=0.28.0",
+    "mypy>=2.1.0",
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
