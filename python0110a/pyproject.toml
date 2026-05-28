@@ -1,0 +1,22 @@
+[project]
+name = "python0110a"
+version = "0.1.0"
+description = "Direktes SQL ohne ORM"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "psycopg2-binary>=2.9.0",
+    "sqlalchemy>=2.0.0",
+    "uvicorn>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=0.28.0",
+    "mypy>=2.1.0",
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

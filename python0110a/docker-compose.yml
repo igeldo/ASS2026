@@ -1,0 +1,9 @@
+services:
+  db:
+    image: postgres:17-bookworm
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: python-starter
+      POSTGRES_PASSWORD: passGeheim
+      POSTGRES_DB: person
