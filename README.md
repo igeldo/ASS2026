@@ -1,21 +1,6 @@
-Fight Bugs                      |     |
-                                \\_V_//
-                                \/=|=\/
-                                 [=v=]
-                               __\___/_____
-                              /..[  _____  ]
-                             /_  [ [  M /] ]
-                            /../.[ [ M /@] ]
-                           <-->[_[ [M /@/] ]
-                          /../ [.[ [ /@/ ] ]
-     _________________]\ /__/  [_[ [/@/ C] ]
-    <_________________>>0---]  [=\ \@/ C / /
-       ___      ___   ]/000o   /__\ \ C / /
-          \    /              /....\ \_/ /
-       ....\||/....           [___/=\___/
-      .    .  .    .          [...] [...]
-     .      ..      .         [___/ \___]
-     .    0 .. 0    .         <---> <--->
-  /\/\.    .  .    ./\/\      [..]   [..]
- / / / .../|  |\... \ \ \    _[__]   [__]_
-/ / /       \/       \ \ \  [____>   <____]
+
+# Repository für die Veranstaltung Ausgewählte Softwaresysteme SoSe2026
+
+1) Jeder Teilnehmer und jede Teilnehmerin soll für Ihre Ergebnisse einen eigenen "branch" erzeugen und dann für die Einzelarbeit verwenden
+
+2) Zusätzlich soll jedes Team einen eigenen "branch" erzeugen und für die Projektarbeit verwenden
