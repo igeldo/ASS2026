@@ -1,0 +1,31 @@
+# =============================================================================
+# requirements.txt – Paketabhängigkeiten für Modul 8
+#
+# Java-Äquivalent: pom.xml (Maven) oder build.gradle (Gradle)
+#
+# Installation (nach Aktivierung der virtuellen Umgebung):
+#   pip install -r requirements.txt
+#
+# Wichtig: Diese Datei IMMER mit in das Git-Repository einpflegen!
+# requirements.txt entspricht dem "Dependency Management"-Block in der pom.xml.
+# Alle Pakete, die hier fehlen, müssen Ihre Kommilitonen manuell nachinstallieren.
+# =============================================================================
+
+# --- Testing ------------------------------------------------------------------
+# pytest ist der Industriestandard – JUnit-Äquivalent für Python
+pytest>=8.0
+
+# Coverage-Plugin: Zeigt an, welche Code-Zeilen durch Tests abgedeckt sind
+# Aufruf: pytest --cov=informatik4_modul8_werkzeuge --cov-report=html
+pytest-cov>=5.0
+
+# --- Entwicklungs-Tools -------------------------------------------------------
+# mypy: Statischer Typchecker (Modul 7) – gibt Java-Entwicklern die
+# Typsicherheit zurück, die sie aus der statischen Typisierung kennen
+mypy>=1.10
+
+# --- Hinweis für spätere Module -----------------------------------------------
+# FastAPI und uvicorn kommen in Modul 9 (REST-Schnittstellen) hinzu:
+# fastapi>=0.111
+# uvicorn[standard]>=0.30
+# pydantic>=2.7
