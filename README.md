@@ -75,15 +75,30 @@ curl -X POST http://127.0.0.1:8000/api/v1/invoices/extract \
 ### Generate ZUGFeRD CII XML
 
 ```text
-POST /api/v1/zugferd/xml
+POST /api/v1/zugferd/xml?validate=true
+```
+
+This is the production endpoint for JSON to XML conversion.
+
+Flow:
+
+```text
+JSON input
+-> EN16931 business validation
+-> CII XML generation
+-> ZUGFeRD XSD validation
+-> returns XML if valid
+-> returns JSON errors if invalid
 ```
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/zugferd/xml \
+curl -X POST "http://127.0.0.1:8000/api/v1/zugferd/xml?validate=true" \
   -H "Content-Type: application/json" \
   --data-binary "@examples/invoice.json" \
   -o invoice.xml
 ```
+
+Use `validate=false` only for debugging XML output without blocking on validation.
 
 ### Validate EN16931 Business Rules
 

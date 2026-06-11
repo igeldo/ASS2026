@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from services.ocr_service import extract_text_from_file
@@ -89,13 +89,43 @@ async def extract_invoice(file: UploadFile = File(...)):
 
 
 @app.post("/api/v1/zugferd/xml")
-def generate_zugferd_cii(invoice: GermanInvoice):
+def generate_zugferd_cii(
+    invoice: GermanInvoice,
+    validate: bool = Query(
+        True,
+        description="Run EN16931 business validation and XSD validation before returning XML.",
+    ),
+):
+    business_result = validate_invoice(invoice)
+    if validate and not business_result["valid"]:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "validation": "en16931",
+                "errors": business_result["errors"],
+            },
+        )
+
     xml = generate_cii_xml(invoice)
+
+    xsd_result = validate_cii_xml(xml)
+    if validate and not xsd_result["valid"]:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "validation": "zugferd_xsd",
+                "errors": xsd_result["errors"],
+            },
+        )
 
     return Response(
         content=xml,
         media_type="application/xml",
-        headers={"X-API-Success": "true"},
+        headers={
+            "X-API-Success": "true",
+            "X-EN16931-Valid": str(business_result["valid"]).lower(),
+            "X-ZUGFeRD-XSD-Valid": str(xsd_result["valid"]).lower(),
+        },
     )
 
 
