@@ -179,9 +179,10 @@ def main() -> None:
 #    nicht wenn sie von einem anderen Modul importiert wird."
 # -----------------------------------------------------------------------
 if __name__ == "__main__":
-    # demo_78_mypy()
-    # demo_77_protokolle()
+
     # demo_75_komplexe_typen()
     # demo_76_callable()
+    # demo_77_protokolle()
+    # demo_78_mypy()
     # demo_79_dataclasses()
       main()
