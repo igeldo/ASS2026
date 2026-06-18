@@ -48,7 +48,7 @@ modul8/
 ### Schritt 1 – Repository klonen (Git-Workflow)
 
 ```bash
-git clone -b Modul8 https://github.com/igeldo/ASS2026.git
+git clone -b Modul8 https://github.com/igeldo/ASS2026.git modul8
 cd modul8
 ```
 
