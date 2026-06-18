@@ -23,12 +23,18 @@ class NumberInputHandler:
         try:
             #             int num = Integer.parseInt(input);
             num = int(user_input)
-            #             System.out.println("you entered: " + num);
-            print("you entered: " + str(num))
         #         } catch (NumberFormatException e) {
         except ValueError:
             #             System.out.println("invalid number");
             print("invalid number")
+        #         } else {
+        else:
+            #             System.out.println("You entered " + num);
+            print("You entered", num)
+        #         } finally {
+        finally:
+            #             System.out.println("end of operation");
+            print("end of operation")
         #     }
         # }
 # }
@@ -62,6 +68,10 @@ class DivisionHandler:
         except ZeroDivisionError:
             #             System.out.println("cannot divide by zero");
             print("cannot divide by zero")
+        #         } finally {
+        finally:
+            #             System.out.println("end of operation");
+            print("end of operation")
         #     }
         # }
 # }
@@ -89,6 +99,10 @@ class MultiErrorHandler:
         except (ValueError, ZeroDivisionError) as e:
             #             System.out.println("Error: " + e.getMessage());
             print("Error: " + str(e))
+        #         } finally {
+        finally:
+            #             System.out.println("end of operation");
+            print("end of operation")
         #     }
         # }
 # }
@@ -118,6 +132,10 @@ class CatchAllHandler:
         except Exception as e:
             #             System.out.println("An error occurred: " + e.getMessage());
             print("An error occurred: " + str(e))
+        #         } finally {
+        finally:
+            #             System.out.println("end of operation");
+            print("end of operation")
         #     }
         # }
 # }
@@ -147,6 +165,10 @@ class AgeValidator:
         except ValueError as e:
             #             System.out.println("Invalid input: " + e.getMessage());
             print("Invalid input: " + str(e))
+        #         } finally {
+        finally:
+            #             System.out.println("end of operation");
+            print("end of operation")
         #     }
         # }
 # }
