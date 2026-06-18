@@ -1,5 +1,5 @@
 # =============================================================================
-# Informatik 4 – Von Java zu OOP in Python
+# Informatik 4
 # main_modul5.py – Demonstrations-Anwendung für Modul 5: Entwurfsmuster
 #
 # Dieses Skript importiert alle Klassen und Funktionen aus
@@ -41,12 +41,14 @@ def trennlinie(titel: str) -> None:
 
 
 # -----------------------------------------------------------------------------
-# 1. SINGLETON – JAVA-STIL
+# 1. SINGLETON – __new__ ALS EINGRIFFSPUNKT
 # -----------------------------------------------------------------------------
-def demo_singleton_java_stil() -> None:
-    trennlinie("Abschnitt 1: Singleton – Java-Stil mit __new__")
+def demo_singleton_klassisch() -> None:
+    trennlinie("Abschnitt 1: Singleton – klassisch über __new__")
 
-    # Zweimal "erzeugt" – aber wir bekommen DAS GLEICHE Objekt zurück.
+    # Zweimal "erzeugt" – aber wir bekommen DASSELBE Objekt zurück.
+    # __new__ entscheidet, ob ein neues Objekt entsteht oder das gecachte
+    # zurückkommt.
     logger_a = LoggerJavaStil()
     logger_b = LoggerJavaStil()
 
@@ -57,23 +59,26 @@ def demo_singleton_java_stil() -> None:
     print(f"logger_b = {logger_b}")
     print(f"\nSind es identische Objekte?  logger_a is logger_b -> {logger_a is logger_b}")
     print(f"Einträge (via logger_a.eintraege): {logger_a.eintraege}")
-    # Beide Variablen zeigen auf dasselbe Objekt – Java-Pattern, Python-Syntax.
+    # Beide Variablen zeigen auf dasselbe Objekt – ein Klassenattribut als
+    # Cache, eine Eingriffspunkt-Methode, fertig.
 
 
 # -----------------------------------------------------------------------------
 # 2. SINGLETON – PYTHONISCH (MODUL + DECORATOR)
 # -----------------------------------------------------------------------------
 def demo_singleton_pythonisch() -> None:
-    trennlinie("Abschnitt 2: Singleton – Pythonisch (Modul + Decorator)")
+    trennlinie("Abschnitt 2: Singleton – Modul-Singleton + @singleton")
 
     # Variante A: das Modul-Attribut IST der Singleton.
-    # Wer "from modul5_entwurfsmuster import konfiguration" macht, bekommt
-    # immer dasselbe _Konfiguration-Objekt – Python cacht Modul-Importe.
+    # "from modul5_entwurfsmuster import konfiguration" liefert immer dieselbe
+    # _Konfiguration-Instanz – das Modul-System cacht Imports beim ersten Zugriff.
     print(f"Modul-Singleton:  {konfiguration}")
     konfiguration.debug = True
     print(f"Nach Änderung:    {konfiguration}")
 
     # Variante B: zweimal @singleton-dekorierte Klasse aufrufen.
+    # Der Decorator hält die einzige Instanz in einem Dict fest und gibt sie
+    # bei jedem weiteren Aufruf zurück – der Konstruktor läuft NICHT erneut.
     db1 = Datenbankverbindung("postgres://prod")
     db2 = Datenbankverbindung("wird-ignoriert")     # Konstruktor läuft NICHT erneut
 
@@ -81,23 +86,24 @@ def demo_singleton_pythonisch() -> None:
     print(f"  db1 = {db1}")
     print(f"  db2 = {db2}")
     print(f"  db1 is db2 -> {db1 is db2}")          # True
-    # Lehre: drei verschiedene Wege – derselbe Effekt.
-    # In Java bräuchte jeder dieser Wege wieder eine eigene Singleton-Klasse.
+    # Drei pythonische Wege, derselbe Effekt – das Modul-System reicht für
+    # die meisten Fälle aus.
 
 
 # -----------------------------------------------------------------------------
-# 3. FACTORY – JAVA-STIL
+# 3. FACTORY – EXPLIZIT MIT if/elif
 # -----------------------------------------------------------------------------
-def demo_factory_java_stil() -> None:
-    trennlinie("Abschnitt 3: Factory – Java-Stil mit if/elif")
+def demo_factory_explizit() -> None:
+    trennlinie("Abschnitt 3: Factory – explizit mit if/elif")
 
-    # Klassische Java-Factory, 1:1 in Python nachgebaut.
+    # Die explizite Variante: eine Factory-Klasse mit einer Verzweigung pro Art.
+    # Lesbar, aber jede neue Tierart erzwingt eine neue Code-Zeile.
     arten = ["hund", "katze", "kuh"]
     for art in arten:
         tier = TierFactoryJavaStil.erzeuge(art)
         print(f"  Factory.erzeuge({art!r:8}) -> {tier}")
 
-    # Fehlerfall – wie eine IllegalArgumentException in Java:
+    # Fehlerfall: unbekannter Schlüssel löst ValueError aus.
     print("\nUngültige Art:")
     try:
         TierFactoryJavaStil.erzeuge("drache")
@@ -110,30 +116,32 @@ def demo_factory_java_stil() -> None:
 # 4. FACTORY – PYTHONISCH (DICT-DISPATCH + CLASSMETHOD)
 # -----------------------------------------------------------------------------
 def demo_factory_pythonisch() -> None:
-    trennlinie("Abschnitt 4: Factory – Pythonisch (Dict-Dispatch + classmethod)")
+    trennlinie("Abschnitt 4: Factory – Dict-Dispatch + classmethod")
 
     # Variante A: Dict-Dispatch.
-    # Klassen sind Objekte – wir schlagen sie im Dict nach und rufen sie auf.
+    # Klassen sind first-class Objekte – wir schlagen sie im Dict nach und
+    # rufen sie auf. Neue Tierart? Eine Dict-Zeile, kein Code an der Factory.
     print("Dict-Dispatch (Registry):")
     for art in ["hund", "katze", "kuh"]:
         tier = erzeuge_tier(art)
         print(f"  erzeuge_tier({art!r:8}) -> {tier}")
 
     # Variante B: @classmethod als alternativer Konstruktor.
-    # Vorteil: die Erzeugungslogik wohnt dort, wo sie hingehört – in der Klasse.
+    # Die Erzeugungslogik wohnt direkt in der Klasse; Aufruf liest sich wie
+    # Domänen-Vokabular.
     print("\nclassmethod-Factory:")
     print(f"  Pizza.margherita() -> {Pizza.margherita()}")
     print(f"  Pizza.salami()     -> {Pizza.salami()}")
-    # Vergleich:
-    #   Java:    new MargheritaPizza()  oder  PizzaFactory.erzeuge("margherita")
-    #   Python:  Pizza.margherita()                  – direkter, lesbarer.
+    # Faustregel:
+    #   Laufzeit-Auswahl per String/Enum   -> Dict-Dispatch
+    #   Auswahl steht zur Programmierzeit  -> @classmethod
 
 
 # -----------------------------------------------------------------------------
-# 5. OBSERVER – JAVA-INTERFACE vs. PYTHON-CALLABLES
+# 5. OBSERVER – CALLABLES STATT LISTENER-INTERFACE
 # -----------------------------------------------------------------------------
 def demo_observer() -> None:
-    trennlinie("Abschnitt 5: Observer – Callables statt Listener-Interface")
+    trennlinie("Abschnitt 5: Observer – Liste von Callables")
 
     news = Newsletter()
 
@@ -141,11 +149,11 @@ def demo_observer() -> None:
     def auf_konsole(ausgabe: str) -> None:
         print(f"  [Konsole]   {ausgabe}")
 
-    # Abonnent 2: ein Lambda – in Java gar nicht so leicht ohne Interface.
+    # Abonnent 2: ein Lambda – Funktionen sind first-class, also direkt einsetzbar.
     nachrichten_archiv: list[str] = []
     archivieren = lambda ausgabe: nachrichten_archiv.append(ausgabe)
 
-    # Abonnent 3: ein Objekt mit __call__ (für Beobachter MIT Zustand).
+    # Abonnent 3: ein Objekt mit __call__ – für Beobachter MIT Zustand.
     zaehler = ZaehlenderAbonnent("Statistik")
 
     news.abonnieren(auf_konsole)
@@ -158,18 +166,18 @@ def demo_observer() -> None:
 
     print(f"\nArchiv:  {nachrichten_archiv}")
     print(f"Zähler:  {zaehler}")
-    # Drei völlig unterschiedliche "Beobachter" – keiner musste ein
-    # Interface implementieren. Duck Typing trifft Observer-Pattern.
+    # Drei völlig unterschiedliche Abonnenten – verbunden allein durch die
+    # Eigenschaft, aufrufbar zu sein.
 
 
 # -----------------------------------------------------------------------------
 # 6. STRATEGY – FUNKTIONEN ALS FIRST-CLASS OBJEKTE
 # -----------------------------------------------------------------------------
 def demo_strategy() -> None:
-    trennlinie("Abschnitt 6: Strategy – Funktionen statt Strategy-Klassen")
+    trennlinie("Abschnitt 6: Strategy – Funktionen als Argument")
 
-    # Drei verschiedene "Strategien" – aber nur eine ist eine echte Funktion,
-    # die anderen werden von Factory-Funktionen erzeugt (Closures).
+    # Drei Strategien als Funktionen. prozent_rabatt(10) ist ein Aufruf, der
+    # eine FUNKTION zurückgibt – eine Closure, die den Wert 10 mitschleppt.
     strategien = {
         "ohne Rabatt":    kein_rabatt,
         "10% Rabatt":     prozent_rabatt(10),
@@ -184,55 +192,56 @@ def demo_strategy() -> None:
         print(f"  {bezeichnung:14} -> {korb}")
 
     # Strategie zur Laufzeit austauschen – einfach Attribut neu setzen.
+    # Kein Setter, kein Pattern-Code: die Strategie IST nur ein Funktionswert.
     korb = Warenkorb()
     korb.hinzufuegen("Laptop", 999.00)
     print(f"\nVor Strategie-Wechsel:  {korb}")
     korb.strategie = prozent_rabatt(20)
     print(f"Nach Strategie-Wechsel: {korb}")
-    # In Java: setRabattStrategie(new ProzentRabatt(20))  – plus eine Klasse mehr.
+    # In der Praxis begegnet man dem Pattern überall: sorted(key=...),
+    # threading.Thread(target=...), map(funktion, ...) – jedes Mal Strategy.
 
 
 # -----------------------------------------------------------------------------
-# 7. CONTEXT MANAGER – PYTHONS "TRY-WITH-RESOURCES" AUF STEROIDEN
+# 7. CONTEXT MANAGER – __enter__/__exit__ UND @contextmanager
 # -----------------------------------------------------------------------------
 def demo_context_manager() -> None:
     trennlinie("Abschnitt 7: Context Manager – with-Statement")
 
-    # Variante A: Klasse mit __enter__/__exit__ – zur Zeitmessung.
+    # Variante A: Klasse mit __enter__/__exit__ zur Zeitmessung.
+    # __exit__ läuft garantiert – auch bei Exceptions im Block.
     with Zeitmessung("Liste aufbauen") as messung:
         summe = sum(i * i for i in range(100_000))
     print(f"  Ergebnis: {summe}")
     print(f"  Gemessene Dauer: {messung.dauer_ms:.2f} ms")
 
-    # Variante B: @contextmanager – ohne Klasse, nur eine Generator-Funktion.
+    # Variante B: @contextmanager – Generator-Funktion mit einem yield.
     # Erfolgreicher Durchlauf:
     print("\nErfolgreiche Transaktion:")
     with transaktion("Buchung 42") as tx_name:
         print(f"   ...führe Buchung '{tx_name}' aus...")
 
-    # Bei einem Fehler im with-Block läuft trotzdem das Aufräumen –
-    # ohne dass irgendwer try/finally schreiben muss.
+    # Auch bei einer Exception im with-Block läuft das Aufräumen zuverlässig –
+    # niemand muss try/finally schreiben.
     print("\nTransaktion mit Fehler:")
     try:
         with transaktion("Buchung 43"):
             raise RuntimeError("Konto gesperrt")
     except RuntimeError as fehler:
         print(f"   Aufrufer fängt: {fehler}")
-    # Kernidee: __exit__ läuft GARANTIERT – das ist der eigentliche Wert
-    # des Patterns. Genau das, was Javas try-with-resources auch will,
-    # aber Python erlaubt jeden Anwendungsfall: Locks, Zeit, Transaktionen,
-    # Mocks im Test, temporäres Verzeichnis, ...
+    # Anwendungsbreite: open(), Locks, Verbindungen, Mocks im Test,
+    # tempfile.TemporaryDirectory – alles dasselbe Sprachmittel.
 
 
 # -----------------------------------------------------------------------------
 # Python-Einstiegspunkt
 # -----------------------------------------------------------------------------
-# Java: public static void main(String[] args) { ... }
-# Python: if __name__ == "__main__": schützt Code vor Ausführung beim Import.
+# if __name__ == "__main__" schützt Code vor Ausführung, wenn die Datei nur
+# als Modul importiert wird.
 if __name__ == "__main__":
-    demo_singleton_java_stil()
+    demo_singleton_klassisch()
     demo_singleton_pythonisch()
-    demo_factory_java_stil()
+    demo_factory_explizit()
     demo_factory_pythonisch()
     demo_observer()
     demo_strategy()

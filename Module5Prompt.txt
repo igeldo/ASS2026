@@ -651,3 +651,193 @@
 ✻ Brewed for 23m 22s
 
 ※ recap: Goal: prepare your Modul 5 presentation on Pythonic design patterns. I built the code, demos, textbook, and presentation notes on the Modul5 branch and committed locally (no push). Next: tell me what to adjust or vertiefen. (disable recaps in /config)
+
+
+================================================================================
+Folgesitzung: Refokussierung weg vom Java-Vergleich
+================================================================================
+
+❯ So the assignment was not to focus so much on Java, meaning we need to take
+  out the Java parts and replace them in the presentation. What options do we
+  have?
+
+● I'll switch into planning mode for this. Quick read-only inspection first to
+  map where Java currently lives in the files, then I'll ask you about scope
+  before writing the plan.
+
+● Bash(grep -cE "Java" modul5_entwurfsmuster.py main_modul5.py
+      MODUL5_LEHRBUCH.md MODUL5_PRESENTATION.md)
+  ⎿  modul5_entwurfsmuster.py: 17
+     main_modul5.py:           18
+     MODUL5_LEHRBUCH.md:       37 (+ sechs ```java```-Codeblöcke)
+     MODUL5_PRESENTATION.md:   39
+
+● Quick map of where Java currently lives:
+
+  | Datei                     | Java-Erwähnungen | Java-Codeblöcke              |
+  |---------------------------|------------------|------------------------------|
+  | modul5_entwurfsmuster.py  | 17               | Kommentar-Blöcke pro Klasse  |
+  | main_modul5.py            | 18               | Kommentare, kein eigener Code|
+  | MODUL5_LEHRBUCH.md        | 37               | 6 vollständige ```java```    |
+  | MODUL5_PRESENTATION.md    | 39               | keine, viele "In Java..."    |
+
+  Bevor ich einen Plan schreibe, brauche ich Klärung — der Kurs heißt
+  buchstäblich "Von Java zu OOP in Python", und die Modul-5-Vorgabe sagt
+  explizit "Bekannte Patterns aus Java (Singleton, Factory, Observer) in
+  Python umsetzen". Daher hat "weniger Java-Fokus" mehrere mögliche
+  Bedeutungen, die zu sehr unterschiedlichen Plänen führen.
+
+  [AskUserQuestion mit drei Achsen]
+   1. Wie weit soll der Java-Anteil reduziert werden?
+      - Java-Codeblöcke raus, kurze Verweise bleiben (Empfohlen)
+      - Komplette Java-Eliminierung
+      - Nur Präsentation/Lehrbuch reduzieren, Code behalten
+      - Java-Code in Appendix verschieben
+   2. Womit soll der freigewordene Platz gefüllt werden? (Mehrfachauswahl)
+      - Real-World Python-Beispiele aus der Stdlib
+      - Mehr Python-Idiom-Diskussion
+      - Mehr Demo-Code / Live-Beispiele
+      - Trade-offs und Anti-Patterns
+   3. Welche Dateien sollen überarbeitet werden? (Mehrfachauswahl)
+      - Präsentations-Notizen, Lehrbuch, Python-Code, README
+
+❯ Option 1 sounds the most correct, but I think even the 1-2 Sentences per
+  pattern should (generally) be removed, at most kept in what I say, but not
+  in the actual presentation text I show as I am explaining.
+
+  Ersatz-Inhalt: Mehr Python-Idiom-Diskussion.
+
+  Welche Dateien: I would say: everything that belongs to our Modul 5 (not
+  other branches of course). One clarification: you mentioned in option 3
+  Python Code that it is risky because the template
+  informatik4_oop_java_zu_python.py has Java-Kommentare. I understan why you
+  would think that, especially since I told you to use it as a template, but
+  I believe you may be taking that too literally. Of course in a big picture
+  way it is precisely a template defining the expectation for our submission,
+  but as you can gather from the name the topic of that was going from java
+  to python... while the other modules such as module 5 focus on different
+  concepts. Perhaps this redirection will help you with the rest of the task
+  at hand as well.
+
+● Verstanden — wichtiger Hinweis bei der Template-Frage. Modul 1's Topic ist
+  explizit "Java→Python", deshalb Java-Kommentare. Modul 5's Topic ist
+  "Pythonische Entwurfsmuster" — das Template definiert Format (trennlinie,
+  7 Methoden, ~250 Zeilen, Deutsch), nicht den Inhaltsfokus. Genau verstanden.
+  Ich schreibe jetzt den Plan.
+
+  [Plan-Datei geschrieben mit Abschnitten:]
+   - Kontext & Korrektur-in-der-Auslegung
+   - Konkrete Änderungen pro Datei (modul5_entwurfsmuster.py, main_modul5.py,
+     MODUL5_LEHRBUCH.md, MODUL5_PRESENTATION.md, README.md)
+   - Leitmotive für Ersatz-Inhalte:
+       1. First-class everything (Funktionen, Klassen, Module sind Objekte)
+       2. Modul-System als Sprachfeature
+       3. Dunder-Methoden als Erweiterungspunkt
+       4. Pragmatismus: einfachstes Werkzeug, das den Job erledigt
+   - Verifikations-Plan (Demo-Output unverändert, Java-Erwähnungen reduziert)
+
+  [ExitPlanMode]
+
+❯ No commit and no push
+
+● Verstanden — kein Commit und kein Push. Ich passe den Plan an, bevor ich
+  ExitPlanMode aufrufe.
+
+  [Plan-Edit:]
+   "Kein Commit, kein Push. Die Änderungen bleiben im Working Tree, bis der
+    Nutzer den Stand inspiziert und ausdrücklich grünes Licht für einen
+    Commit gibt."
+
+  [ExitPlanMode → User approved]
+
+● Starting with the Python classes file — full rewrite with Python-idiom-
+  centric framing.
+
+  [Write modul5_entwurfsmuster.py — Java-Code-Kommentarblöcke entfernt,
+   ersetzt durch kurze Python-Idiom-Erklärungen pro Pattern. Klassennamen
+   LoggerJavaStil/TierFactoryJavaStil bleiben — sie etikettieren den
+   *Stil*, nicht die Sprache.]
+
+  302 lines, 5 Java refs (4 are class names by design, 1 explains the
+  naming). Down from 325/17.
+
+● [Write main_modul5.py — Java-Verweise in Demo-Kommentaren durch Python-
+  Lehre ersetzt. Funktionsnamen umbenannt:
+   demo_singleton_java_stil → demo_singleton_klassisch
+   demo_factory_java_stil   → demo_factory_explizit]
+
+  6 Java refs in main_modul5.py — all are direct uses of LoggerJavaStil /
+  TierFactoryJavaStil class names (kept by design).
+
+● [Write MODUL5_LEHRBUCH.md — Restrukturierung pro Pattern-Abschnitt:
+   "Das Problem" → "Pythonisch lösen" → Varianten → "Wo in Python begegnet"
+   → "Wann braucht man das Pattern nicht?". Alle sechs ```java```-Codeblöcke
+   entfernt. Zen-of-Python-Leitsätze im Einstieg und Schluss verankert.]
+
+  Lehrbuch: 5 Java refs (all class names), 0 java code blocks (target was 0).
+  682 lines — grew due to the new Python-idiom sections.
+
+● [Write MODUL5_PRESENTATION.md — Thesensätze auf Python-Idiomatik
+   umformuliert. "Verbaler Bezug (Speaker-Note, optional)" als neuer
+   Bullet pro Abschnitt — hier dürfen kurze Java-Bezüge stehen, klar als
+   "Falls jemand fragt" markiert. Abschluss-Tabelle: Pattern →
+   Python-Mechanismus → 1-Satz-Idiomatik. FAQ um eine Zeile "Und in Java?"
+   ergänzt mit prägnanter Antwort.]
+
+  Presentation: 5 Java refs (target was ≤10) — 2 class names, 3 intentional
+  speaker-note / closing-question references.
+
+● [Write README.md — Framing umgestellt: "Pythonische Entwurfsmuster — wann
+   braucht man überhaupt ein Pattern, und welche Python-Sprachmittel tragen
+   es?" Hinweis-Box zu Java-Kommentaren gestrichen.]
+
+  README: 3 Java refs — 2 in sample class names, 1 in the Modul-4 description
+  (which references the prof's own module title).
+
+● Bash(python3 main_modul5.py)
+  ⎿  Abschnitt 1: Singleton – klassisch über __new__
+     logger_a is logger_b -> True
+     ...
+     Abschnitt 7: Context Manager – with-Statement
+     [TX] 'Buchung 43' ROLLBACK wegen: Konto gesperrt
+     Ende der Demonstration – Modul 5: Pythonische Entwurfsmuster
+
+  Demo läuft sauber durch — alle 7 Abschnitte mit Python-zentrischen Titeln
+  und korrekten Outputs.
+
+● Refokussierung abgeschlossen. Demo läuft unverändert sauber durch.
+
+  Ergebnis-Übersicht – Java-Referenzen (vorher → nachher):
+
+  ┌───────────────────────────┬─────────┬─────────┬───────┐
+  │ Datei                     │ Vorher  │ Nachher │ Ziel  │
+  ├───────────────────────────┼─────────┼─────────┼───────┤
+  │ modul5_entwurfsmuster.py  │   17    │    5    │  ≤3   │
+  │ main_modul5.py            │   18    │    6    │  ≤3   │
+  │ MODUL5_LEHRBUCH.md        │   37    │    5    │  ≤7   │
+  │ MODUL5_PRESENTATION.md    │   39    │    5    │  ≤10  │
+  │ README.md                 │ viele   │    3    │  ≤2   │
+  │ ```java```-Codeblöcke     │    6    │    0    │   0   │
+  └───────────────────────────┴─────────┴─────────┴───────┘
+
+  Inhaltliche Verschiebung:
+  - Java-Codeblöcke und seitliche Vergleiche entfernt
+  - Pattern-Abschnittsnamen umformuliert: "Singleton – klassisch über
+    __new__" statt "Singleton – Java-Stil mit __new__", "Factory – explizit
+    mit if/elif" statt "Factory – Java-Stil"
+  - Vier wiederkehrende Leitmotive eingebaut: first-class everything,
+    Modul-System, Dunder-Methoden, Pythons Pragmatismus
+  - Pro Pattern im Lehrbuch jetzt: "Wo in Python begegnet?" (Stdlib-
+    Beispiele wie sys.modules, sorted(key=...), signal.signal) und "Wann
+    braucht man das Pattern nicht?" (YAGNI/Singleton-Skepsis Python-
+    zentrisch begründet)
+  - Zen-of-Python-Bezüge in Lehrbuch- und README-Header
+  - Klassennamen LoggerJavaStil / TierFactoryJavaStil bewusst beibehalten
+    als pädagogische Marker — die Etiketten heißen *Stil*, nicht *Sprache*
+
+  Git-Status: 5 Dateien modified, nicht committed, nicht gepusht —
+  Working-Tree-Stand wartet auf Inspektion.
+
+  Was als Nächstes — eine Stelle vertiefen, oder Stand ansehen und dann
+  Commit-Entscheidung treffen?
+

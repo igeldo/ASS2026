@@ -1,34 +1,37 @@
 # Modul 5 – Pythonische Entwurfsmuster
 
-> *"Was würde ich in Java tun – und wie denkt Python das?"*
-> Der rote Faden der ganzen Veranstaltung gilt hier doppelt: Entwurfsmuster
-> sind in Java oft eine Antwort auf das, was die Sprache **nicht** kann.
-> Wenn man sie 1:1 nach Python übersetzt, übersetzt man unbeabsichtigt auch
-> die Java-Einschränkungen mit. Pythonisch zu denken heißt: erst fragen,
-> ob das Pattern überhaupt nötig ist.
+> *"Schön ist besser als hässlich. Einfach ist besser als komplex.
+> Lesbarkeit zählt."* — aus *The Zen of Python* (Tim Peters)
+>
+> Entwurfsmuster sind eine Antwort auf die Frage, wie man wiederkehrende
+> Probleme robust strukturiert. Pythons Sprachmittel — Module, first-class
+> Klassen und Funktionen, Dunder-Methoden, Decorators — verändern aber, was
+> "robust" überhaupt heißt. Viele Patterns werden in Python kürzer, manche
+> verschwinden ganz im Sprachkern, und einige wenige (Context Manager)
+> erleben in Python ihren idiomatischsten Ausdruck.
 
 ## Lernziele
 
 Nach Durcharbeitung dieses Moduls können Studierende
 
-- die drei klassischen Patterns Singleton, Factory und Observer in Python
-  sowohl im Java-Stil als auch idiomatisch umsetzen,
-- erklären, **warum** Python für einige Patterns weniger Boilerplate braucht
+- die drei klassischen Patterns Singleton, Factory und Observer pythonisch
+  umsetzen — und benennen, **welcher Sprachmechanismus** sie jeweils trägt,
+- erklären, warum Python für einige Patterns kaum Boilerplate braucht
   (first-class Funktionen, Klassen als Objekte, Modul-System),
-- entscheiden, wann ein Pattern in Python **überflüssig** ist (z. B. Strategy
-  mit Funktionen statt Klassen),
-- Context Manager als Pythons Antwort auf "etwas muss zuverlässig danach
-  passieren" einsetzen.
+- entscheiden, wann ein Pattern in Python **überflüssig** ist (Strategy mit
+  einer einfachen Funktion, Singleton durch ein Modul-Attribut),
+- Context Manager als verallgemeinerten Mechanismus für *"etwas muss
+  zuverlässig danach passieren"* einsetzen.
 
 ---
 
 ## 5.0 Was ist ein Entwurfsmuster?
 
-Ein **Entwurfsmuster** (engl. *design pattern*) ist eine bewährte, sprach­unabhängige
-Schablone für ein wiederkehrendes Entwurfsproblem. Der Klassiker ist das Buch
-*"Design Patterns: Elements of Reusable Object-Oriented Software"* (1994) der
-sogenannten **Gang of Four** (Gamma, Helm, Johnson, Vlissides) mit 23 Patterns
-in drei Kategorien:
+Ein **Entwurfsmuster** (engl. *design pattern*) ist eine bewährte,
+sprach­unabhängige Schablone für ein wiederkehrendes Entwurfsproblem. Der
+Klassiker ist das Buch *"Design Patterns: Elements of Reusable Object-
+Oriented Software"* (1994) der sogenannten **Gang of Four** (Gamma, Helm,
+Johnson, Vlissides) mit 23 Patterns in drei Kategorien:
 
 | Kategorie | Frage | Beispiele |
 |---|---|---|
@@ -36,18 +39,30 @@ in drei Kategorien:
 | Strukturmuster | Wie passen Objekte zusammen? | Adapter, Decorator, Composite |
 | Verhaltensmuster | Wie kommunizieren Objekte? | **Observer, Strategy**, Command, Iterator |
 
-Die Patterns wurden ursprünglich für C++ und Smalltalk beschrieben und sind in
-der Java-Welt extrem populär geworden – nicht zuletzt, weil Java mit seiner
-strikten OOP-Sicht viele alltägliche Probleme nur mit Klassen lösen kann.
-
-Python hat von Anfang an **mehr Werkzeuge**: Funktionen sind Objekte, Klassen
-sind Objekte, Module sind Objekte. Viele Java-Patterns sind in Python deshalb
-"unsichtbar" – sie verschwinden in Spracheigenschaften oder werden zu einer
-einzigen Zeile.
+Die Patterns wurden ursprünglich vor allem für statisch typisierte,
+klassen­basierte Sprachen formuliert. Pythons dynamisches Typsystem und seine
+"first-class everything"-Philosophie verändern den Werkzeugkasten — viele
+Patterns wirken in Python kleiner, weil die Sprache bereits zur Verfügung
+stellt, was anderswo Pattern-Code erst herstellt.
 
 > **Peter Norvigs These (1998):** *"16 of the 23 patterns are either invisible
-> or simpler in Python."*
-> Wir werden in diesem Modul anhand von fünf Patterns sehen, was er damit meint.
+> or simpler in dynamic languages."* — wir werden in diesem Modul anhand von
+> fünf Patterns sehen, was er damit meint.
+
+### Pythons Werkzeugkasten – das Vokabular dieses Moduls
+
+Vier Sprachmittel tauchen in fast jedem Pattern dieses Moduls wieder auf —
+wer sie kennt, hat den größten Teil der Patterns schon "im Griff":
+
+- **Modul-System.** Jedes Modul wird beim ersten Import gecached. Variablen
+  auf Modul-Ebene existieren genau einmal im Prozess.
+- **First-class Funktionen und Klassen.** Beide sind Werte, die in
+  Variablen, Listen, Dicts gespeichert oder als Argument übergeben werden
+  können.
+- **Dunder-Methoden.** `__new__`, `__call__`, `__enter__`, `__exit__` und
+  andere sind dokumentierte Erweiterungspunkte des Sprach-Interpreters.
+- **Decorators.** Funktionen, die andere Funktionen oder Klassen entgegen­
+  nehmen und etwas Erweitertes zurückgeben.
 
 ---
 
@@ -55,73 +70,18 @@ einzigen Zeile.
 
 ### Das Problem
 
-Manchmal soll es von einer Klasse **genau eine** Instanz geben – einen Logger,
-einen Konfigurations-Container, einen Verbindungspool. Wer eine "neue" Instanz
-anfordert, soll dieselbe bekommen.
+Manchmal soll es von einer Klasse **genau eine** Instanz geben – einen
+Logger, einen Konfigurations-Container, einen Verbindungspool. Wer eine
+"neue" Instanz anfordert, soll dieselbe bekommen.
 
-### Java – der Klassiker
+### Pythonisch lösen
 
-```java
-public class Logger {
-    private static Logger instance;
-    private List<String> eintraege = new ArrayList<>();
+Pythons Modul-System cacht jedes Modul beim ersten Import. Variablen auf
+Modul-Ebene existieren damit **automatisch genau einmal**. Das ist der
+eigentliche pythonische Singleton-Mechanismus — und er kommt ohne ein
+einziges Pattern auskommendes Codestück aus.
 
-    private Logger() {}                            // Konstruktor privat!
-
-    public static Logger getInstance() {
-        if (instance == null) instance = new Logger();
-        return instance;
-    }
-
-    public void log(String n) { eintraege.add(n); }
-}
-```
-
-Drei Java-Sprachmittel zusammen erzeugen den Singleton:
-
-1. `private static instance` als Cache,
-2. **privater Konstruktor**, damit `new Logger()` von außen verboten ist,
-3. statische Zugangsmethode `getInstance()`.
-
-### Python – Variante 1: Java-Stil mit `__new__`
-
-Python kennt keinen privaten Konstruktor. Wir hängen uns stattdessen in
-`__new__` ein – die Dunder-Methode, die das Objekt erzeugt (vor `__init__`).
-
-```python
-class LoggerJavaStil:
-    _instanz: "LoggerJavaStil | None" = None
-
-    def __new__(cls):
-        if cls._instanz is None:
-            cls._instanz = super().__new__(cls)
-            cls._instanz.eintraege = []
-        return cls._instanz
-
-    def log(self, nachricht: str) -> None:
-        self.eintraege.append(nachricht)
-```
-
-```python
-a = LoggerJavaStil()
-b = LoggerJavaStil()
-a is b              # True – dasselbe Objekt
-```
-
-Funktioniert, ist aber Java-Denken in Python-Syntax. Drei Stolpersteine:
-
-- `__init__` läuft bei jedem Aufruf **erneut** – wir initialisieren deshalb
-  in `__new__` und nur einmal (über die `is None`-Prüfung).
-- Threadsicher ist das **nicht**. In Java auch nicht ohne Weiteres
-  (Double-Checked Locking), in Python schützt der GIL nicht zuverlässig.
-- Vererbung wird unangenehm: alle Unterklassen würden sich dieselbe
-  `_instanz`-Variable teilen, wenn man nicht aufpasst.
-
-### Python – Variante 2: Modul-Singleton
-
-Pythons Importsystem cacht jedes Modul beim ersten Import. **Variablen auf
-Modul-Ebene sind damit automatisch Singletons.** Es gibt sie *genau einmal*
-im Prozess, egal wie oft jemand das Modul importiert.
+### Variante 1: Modul-Singleton (Standardfall)
 
 ```python
 # datei: konfiguration.py
@@ -143,15 +103,52 @@ from konfiguration import konfiguration
 print(konfiguration.debug)             # True
 ```
 
-Das ist die idiomatische Python-Antwort. Kein Pattern-Code, keine `__new__`-
-Klimmzüge, keine `getInstance()`. **Das Sprachsystem erledigt es.**
+Kein Pattern-Code, keine `getInstance()`-Methode. **Das Sprachsystem
+erledigt es.**
 
-In Java geht das so nicht: jede Klasse braucht ihr eigenes Singleton-Boilerplate.
+### Variante 2: `__new__` als expliziter Eingriffspunkt
 
-### Python – Variante 3: Singleton-Decorator
+Wer den Singleton-Charakter direkt in der Klasse verankern möchte, hängt
+sich in `__new__` ein — die Dunder-Methode, die das Objekt erzeugt (vor
+`__init__`).
 
-Wer den Singleton-Charakter explizit deklarieren möchte, kann einen Decorator
-schreiben – wiederverwendbar für beliebige Klassen:
+```python
+class LoggerJavaStil:
+    _instanz: "LoggerJavaStil | None" = None
+
+    def __new__(cls):
+        if cls._instanz is None:
+            cls._instanz = super().__new__(cls)
+            cls._instanz.eintraege = []
+        return cls._instanz
+
+    def log(self, nachricht: str) -> None:
+        self.eintraege.append(nachricht)
+```
+
+```python
+a = LoggerJavaStil()
+b = LoggerJavaStil()
+a is b              # True – dasselbe Objekt
+```
+
+Drei Dinge sollte man wissen:
+
+- `__init__` läuft bei jedem Aufruf **erneut**. Wir initialisieren deshalb
+  in `__new__` und nur einmal (über die `is None`-Prüfung).
+- Threadsicher ist das **nicht**. Der GIL schützt einzelne Bytecode-
+  Operationen, aber nicht zwei aufeinanderfolgende Zugriffe. Wer
+  Threadsicherheit braucht: `threading.Lock()` um die Erzeugung legen — oder
+  besser gleich den Modul-Singleton nehmen, der durch das Import-System
+  ohnehin nur einmal entsteht.
+- Vererbung wird unangenehm: alle Unterklassen würden sich dieselbe
+  `_instanz`-Variable teilen, wenn man nicht aufpasst.
+
+### Variante 3: `@singleton`-Decorator
+
+Decorators sind Funktionen, die eine Klasse (oder Funktion) entgegennehmen
+und etwas Erweitertes zurückgeben. Hier eine wiederverwendbare Singleton-
+Variante:
 
 ```python
 def singleton(klasse):
@@ -168,10 +165,20 @@ class Datenbankverbindung:
         self.dsn = dsn
 ```
 
-`@singleton` ist Python-Syntax für: "Wende die Funktion `singleton` auf die
-Klasse `Datenbankverbindung` an." Was zurückkommt, ist `hole_instanz` – also
-**keine Klasse mehr, sondern eine Funktion**, die die Klasse zwischenspeichert.
-Aus Sicht des Aufrufers bleibt `Datenbankverbindung(...)` gleich.
+`@singleton` ist Syntax für *"wende `singleton` auf `Datenbankverbindung`
+an"*. Was zurückkommt, ist `hole_instanz` — **keine Klasse mehr, sondern
+eine Funktion**, die die Klasse zwischenspeichert. Aus Sicht des Aufrufers
+bleibt `Datenbankverbindung(...)` unverändert.
+
+### Wo das in Python begegnet
+
+Pythons Standardbibliothek verwendet implizit Modul-Singletons an vielen
+Stellen:
+
+- `sys.modules` – das globale Modul-Cache-Dict ist selbst ein Singleton.
+- `logging.getLogger("name")` – gibt für denselben Namen immer denselben
+  Logger zurück.
+- `random.random()` – arbeitet auf einer Modul-internen `Random`-Instanz.
 
 ### Wann welche Variante?
 
@@ -179,13 +186,23 @@ Aus Sicht des Aufrufers bleibt `Datenbankverbindung(...)` gleich.
 |---|---|
 | **Modul-Singleton** | Standardfall. Praktisch immer die richtige Wahl. |
 | **`@singleton`-Decorator** | Wenn die Singleton-Eigenschaft sichtbar im Klassen-Header dokumentiert werden soll. |
-| **`__new__`-Variante** | Wenn man das Java-Pattern lehrt – sonst eher selten. |
-| **Metaklassen-Singleton** | Existiert auch (`type` selbst überschreiben) – akademisch interessant, in der Praxis selten nötig. |
+| **`__new__`-Variante** | Akademisch interessant, in der Praxis selten nötig. |
+| **Metaklassen-Singleton** | Existiert auch — `type` selbst überschreiben — wird für nahezu alle Anwendungsfälle überdimensioniert. |
 
-> **Kritische Stimme:** Viele Python-Erfahrene halten Singletons für ein
-> *Anti-Pattern* – sie sind globaler Zustand, schwer testbar, schwer zu
-> mocken. Wenn möglich: lieber Abhängigkeit explizit als Argument übergeben
-> ("Dependency Injection") statt versteckt über eine globale Instanz holen.
+### Wann braucht man das Pattern *nicht*?
+
+Singletons sind in der Python-Community **umstritten**: sie sind globaler
+Zustand, schwer testbar, schwer zu mocken. Wer den vermeintlich
+"einzigen" Wert lieber explizit als Argument übergibt, bekommt:
+
+- **Testbarkeit** — im Test einfach eine Fake-Instanz übergeben.
+- **Lesbarkeit** — der Datenfluss steht im Code, nicht implizit im Import.
+- **Mehrere Instanzen** — falls sich später herausstellt, dass zwei
+  Konfigurationen nebeneinander gebraucht werden.
+
+> **Faustregel:** Singletons benutzen, weil "man das so macht", ist
+> ein Reflex aus statisch-typisierten Sprachen. In Python lohnt sich jedes
+> Mal die Frage *"brauche ich das wirklich?"*.
 
 ---
 
@@ -194,30 +211,18 @@ Aus Sicht des Aufrufers bleibt `Datenbankverbindung(...)` gleich.
 ### Das Problem
 
 Der Aufrufer soll ein Objekt eines passenden Untertyps bekommen, ohne den
-konkreten Typ zu kennen. Beispiel: "Gib mir ein Tier vom Typ 'hund'." Die
-Aufrufseite weiß nichts von der Klasse `Hund` – nur von `Tier`.
+konkreten Typ zu kennen. Beispiel: *"Gib mir ein Tier vom Typ `'hund'`."*
+Die Aufrufseite weiß nichts von der Klasse `Hund` – nur von `Tier`.
 
-### Java – Factory-Klasse mit `if/elif`
+### Pythonisch lösen
 
-```java
-interface Tier { String laut(); }
-class Hund  implements Tier { public String laut() { return "Wuff"; } }
-class Katze implements Tier { public String laut() { return "Miau"; } }
+Klassen sind in Python **first-class Objekte**: man kann sie in Listen oder
+Dicts speichern und ganz normal aufrufen. Damit wird aus der Factory ein
+Lookup statt einer Verzweigung.
 
-class TierFactory {
-    public static Tier erzeuge(String art) {
-        if (art.equals("hund"))  return new Hund();
-        if (art.equals("katze")) return new Katze();
-        throw new IllegalArgumentException(art);
-    }
-}
-```
+### Variante 1: explizit mit `if/elif`
 
-Drei Bestandteile: **Interface** (definiert den gemeinsamen Vertrag),
-**konkrete Klassen**, **Factory-Klasse**. Die `if/elif`-Kette wächst mit jeder
-neuen Tierart.
-
-### Python – Variante 1: Java-Stil 1:1
+Der direkte Weg — eine Factory-Klasse mit Verzweigungen:
 
 ```python
 from abc import ABC, abstractmethod
@@ -240,12 +245,10 @@ class TierFactoryJavaStil:
         else: raise ValueError(f"Unbekannte Tierart: {art!r}")
 ```
 
-Direkter Java-Stil – nichts gewonnen, aber für den Vergleich gut.
+Lesbar — aber jede neue Tierart erzwingt eine neue Code-Zeile in der
+Factory.
 
-### Python – Variante 2: Dict-Dispatch (Registry)
-
-Klassen sind in Python **first-class Objekte**: man kann sie in Listen
-oder Dicts speichern und ganz normal aufrufen.
+### Variante 2: Dict-Dispatch (Registry)
 
 ```python
 _TIER_REGISTRY: dict[str, type[Tier]] = {
@@ -266,10 +269,12 @@ def erzeuge_tier(art: str) -> Tier:
 - Lookup ist O(1) statt O(n) – belanglos bei drei Einträgen, relevant bei 50.
 - Plugins können sich nachträglich registrieren: `_TIER_REGISTRY["drache"] = Drache`.
 
-**Variante mit Decorator-Registrierung** (für Fortgeschrittene):
+**Decorator-Variante** (für Fortgeschrittene): jede Klasse "meldet sich
+selbst" an.
 
 ```python
-TIERE = {}
+TIERE: dict[str, type[Tier]] = {}
+
 def registriere(art):
     def deco(klasse):
         TIERE[art] = klasse
@@ -285,10 +290,9 @@ class Katze(Tier):
     def laut(self): return "Miau"
 ```
 
-Jede Klasse "meldet sich selbst an". Frameworks wie Django und Flask
-funktionieren auf dieser Idee.
+Frameworks wie Django und Flask funktionieren genau auf dieser Idee.
 
-### Python – Variante 3: `@classmethod` als alternativer Konstruktor
+### Variante 3: `@classmethod` als alternativer Konstruktor
 
 Wer nur **wenige, gut benannte** Varianten erzeugen möchte, braucht keine
 Factory-Klasse: die Erzeugungslogik gehört direkt in die Klasse.
@@ -312,11 +316,31 @@ p1 = Pizza.margherita()
 p2 = Pizza.salami()
 ```
 
-Lesbarer als `PizzaFactory.erzeuge("margherita")`, näher am Domänen-Vokabular.
+`Pizza.margherita()` liest sich wie Domänen-Vokabular — näher am
+Anwendungsproblem als ein Lookup mit einer Zeichenkette.
+
+### Wo das in Python begegnet
+
+- `dict.fromkeys(seq)`, `dict.from_keys(seq, value)` – `@classmethod`-Factory.
+- `datetime.fromisoformat(s)`, `datetime.fromtimestamp(t)` – alternative
+  Konstruktoren als `@classmethod`.
+- `json.loads` / `pickle.loads` – Funktionen, die je nach Inhalt verschiedene
+  Klassen erzeugen.
+- Plugin-Systeme über `entry_points` in `pyproject.toml` – im Kern eine
+  laufzeit-erweiterte Registry.
+
+### Wann welche Variante?
 
 > **Faustregel:** Wenn die Auswahl per **String/Enum zur Laufzeit** kommt –
 > Dict-Dispatch. Wenn die Auswahl **zur Programmierzeit** feststeht und nur
 > bequeme Konstruktoren gewollt sind – `@classmethod`.
+
+### Wann braucht man das Pattern *nicht*?
+
+Bei nur einer Klasse oder wenn der Aufrufer den konkreten Typ ohnehin
+kennt, ist eine Factory überflüssig — der direkte Konstruktor reicht.
+Pythonischer Pragmatismus: nicht abstrahieren, was nicht abstrahiert
+werden muss.
 
 ---
 
@@ -324,35 +348,16 @@ Lesbarer als `PizzaFactory.erzeuge("margherita")`, näher am Domänen-Vokabular.
 
 ### Das Problem
 
-Ein Objekt (Subject / Publisher) hält andere (Observer / Subscriber) auf dem
-Laufenden, ohne sie konkret zu kennen. Beispiele: Newsletter-Versand,
+Ein Objekt (Subject / Publisher) hält andere (Observer / Subscriber) auf
+dem Laufenden, ohne sie konkret zu kennen. Beispiele: Newsletter-Versand,
 Event-Bus, MVC-Updates.
 
-### Java – Listener-Interface
+### Pythonisch lösen
 
-```java
-interface Beobachter {
-    void aktualisiere(String ereignis);
-}
-
-class Newsletter {
-    private List<Beobachter> beobachter = new ArrayList<>();
-    public void anmelden(Beobachter b)  { beobachter.add(b); }
-    public void veroeffentliche(String s) {
-        for (Beobachter b : beobachter) b.aktualisiere(s);
-    }
-}
-
-class KonsolenAusgabe implements Beobachter {
-    public void aktualisiere(String s) { System.out.println(s); }
-}
-```
-
-Java **braucht** das Interface, weil `for (Beobachter b ...)` sonst nicht
-weiß, welche Methode aufzurufen ist – statische Typisierung verlangt einen
-gemeinsamen Vertrag.
-
-### Python – Liste von Callables
+Alles, was man mit `(...)` aufrufen kann, ist ein **Callable**: gewöhnliche
+Funktion, Lambda, gebundene Methode oder Objekt mit `__call__`. Der
+Newsletter braucht damit kein gemeinsames Interface für seine Abonnenten —
+nur eine Liste von Callables.
 
 ```python
 from typing import Callable
@@ -369,7 +374,7 @@ class Newsletter:
             callback(ausgabe)
 ```
 
-Jetzt kann **alles, was aufrufbar ist**, Beobachter sein:
+Jetzt darf **alles Aufrufbare** Beobachter sein:
 
 ```python
 def auf_konsole(s):
@@ -383,12 +388,13 @@ news.abonnieren(print)                          # eingebaute Funktion
 news.veroeffentlichen("Hallo")
 ```
 
-Drei verschiedene "Beobachter" – keiner musste ein Interface implementieren.
+Drei verschiedene Abonnenten — verbunden allein durch die Eigenschaft,
+aufrufbar zu sein.
 
 ### Observer mit Zustand: `__call__`
 
 Falls ein Beobachter Zustand mitschleppen muss, definiert man eine ganz
-normale Klasse – und macht sie mit `__call__` aufrufbar:
+normale Klasse — und macht sie mit `__call__` aufrufbar:
 
 ```python
 class ZaehlenderAbonnent:
@@ -405,20 +411,27 @@ zaehler = ZaehlenderAbonnent("Statistik")
 news.abonnieren(zaehler)        # zaehler ist aufrufbar wie eine Funktion
 ```
 
-> **Wozu das Ganze?** Wer in Java *jeden* möglichen Listener als eigene
-> Implementierung des Beobachter-Interfaces schreiben muss, hat schnell
-> drei Klassen für eine Lambda-Zeile. Python erlaubt die volle Bandbreite:
-> Funktion, Lambda, gebundene Methode, aufrufbares Objekt.
+`__call__` ist der Dunder-Mechanismus dahinter — das Sprach-Feature, das
+"Objekt sieht aus wie eine Funktion" zur Vertrags­bedingung macht.
 
-### Hinweis: Konkrete Bibliotheken
+### Wo das in Python begegnet
 
-Für echtes Event-Handling in Produktivcode gibt es etablierte Bibliotheken:
+- `tkinter` und `PyQt` arbeiten in ihrem GUI-Kern mit Callbacks-Listen für
+  Events.
+- `signal.signal(SIGINT, handler)` – die Standardbibliothek nimmt direkt
+  ein Callable als Handler entgegen.
+- Bibliotheken wie `blinker` und `pydispatch` packen das Pattern in
+  einsatzfertige Signal-Frameworks.
+- `dataclasses.field(default_factory=list)` – auch hier ein Callable als
+  Parameter, kein gemeinsames Interface.
 
-- `blinker` – generisches Signal-Framework
-- `pydispatch` – schlanker Signal-Mechanismus
-- `pyqtSignal` / `tkinter`-Events – GUI-Frameworks bringen ihre eigene Variante
+### Wann braucht man das Pattern *nicht*?
 
-Das Pattern bleibt dasselbe; die Bibliothek nimmt die Buchhaltung ab.
+Wenn nur **ein** Beobachter existiert, reicht ein einfacher Methoden-
+Aufruf. Wenn Beobachter und Subject im gleichen Modul wohnen, ist eine
+direkte Funktion oft klarer als eine vorbereitete Abonnement-Schicht.
+Pythons Devise *"explizit ist besser als implizit"* warnt vor zu vielen
+versteckten Signalwegen.
 
 ---
 
@@ -429,35 +442,13 @@ Das Pattern bleibt dasselbe; die Bibliothek nimmt die Buchhaltung ab.
 Ein Algorithmus soll **zur Laufzeit** austauschbar sein. Klassiker:
 verschiedene Rabatt-Berechnungen, Sortier-Kriterien, Komprimierungs-Verfahren.
 
-### Java – Strategy-Interface
+### Pythonisch lösen
 
-```java
-interface RabattStrategie {
-    double berechne(double preis);
-}
-
-class KeinRabatt implements RabattStrategie {
-    public double berechne(double preis) { return preis; }
-}
-
-class ProzentRabatt implements RabattStrategie {
-    private double prozent;
-    public ProzentRabatt(double p) { this.prozent = p; }
-    public double berechne(double preis) {
-        return preis * (1 - prozent / 100);
-    }
-}
-
-class Warenkorb {
-    private RabattStrategie strategie;
-    public Warenkorb(RabattStrategie s) { this.strategie = s; }
-}
-```
-
-Für *zwei verschiedene Rabatt-Funktionen* braucht Java: ein Interface, zwei
-Implementierungs-Klassen plus die Warenkorb-Anbindung.
-
-### Python – Funktionen reichen
+Funktionen sind in Python first-class Werte. Eine "Strategie" ist deshalb
+keine Klassenhierarchie, sondern schlicht eine Funktion. Eine
+parametrisierbare Strategie? Eine Funktion, die eine Funktion zurückgibt —
+das nennt man **Closure**, denn die zurückgegebene Funktion *schließt*
+ihren Geltungsbereich um die übergebenen Werte.
 
 ```python
 def kein_rabatt(preis: float) -> float:
@@ -483,25 +474,30 @@ korb = Warenkorb(prozent_rabatt(10))            # 10 % Rabatt
 korb.strategie = prozent_rabatt(20)             # zur Laufzeit wechseln
 ```
 
-**Closure-Detail:** `prozent_rabatt(10)` gibt eine **Funktion** zurück, die
-den Wert `10` in ihrem Geltungsbereich behält. Das ist Pythons Antwort auf
-eine "parametrisierte Strategie-Klasse" – aber ohne Klasse, ohne Interface,
-ohne `new`.
+`prozent_rabatt(10)` gibt eine **Funktion** zurück, die den Wert `10` in
+ihrem Geltungsbereich behält — das ist Pythons Antwort auf eine
+parametrisierte Strategie-Klasse, kompakt in fünf Zeilen.
 
-### Wo das in der Standardbibliothek begegnet
+### Wo das in Python begegnet
 
-Das Strategy-Pattern ist in Python so verbreitet, dass es kaum noch als
-Pattern erkannt wird – es ist einfach *Funktionen übergeben*:
+Strategy ist in Python so verbreitet, dass es kaum noch als Pattern
+erkannt wird — es ist einfach *Funktionen übergeben*:
 
 ```python
-sorted(personen, key=lambda p: p.alter)         # Strategy = key-Funktion
-list(map(str.upper, namen))                     # Strategy = Transformation
-threading.Thread(target=mein_job).start()       # Strategy = was getan wird
+sorted(personen, key=lambda p: p.alter)         # key = Strategie
+list(map(str.upper, namen))                     # Strategie als Transformation
+threading.Thread(target=mein_job).start()       # Strategie = was getan wird
+heapq.nlargest(5, daten, key=lambda x: x.preis) # ebenfalls Strategie
 ```
 
-Jedes `key=`-Argument, jedes `target=`-Argument, jeder `lambda` ist im Kern
-ein Strategy-Pattern. Java braucht dafür `Comparator`-Interfaces oder seit
-Java 8 funktionale Interfaces und Lambdas.
+Jedes `key=`-Argument, jedes `target=`-Argument, jeder `lambda` ist im
+Kern ein Strategy-Pattern.
+
+### Wann braucht man das Pattern *nicht*?
+
+Wenn es **nur eine** mögliche Strategie gibt, ist die Indirektion
+überflüssig. Pythonisch: erst beim zweiten Strategie-Bedarf einen Parameter
+einführen — vorher inline schreiben. *"You ain't gonna need it."*
 
 ---
 
@@ -509,37 +505,18 @@ Java 8 funktionale Interfaces und Lambdas.
 
 ### Das Problem
 
-Manche Operationen brauchen **garantiertes Aufräumen** – egal ob der Block
-erfolgreich war oder eine Exception geflogen ist. Datei schließen, Lock
-freigeben, Verbindung trennen, Transaktion zurückrollen.
+Manche Operationen brauchen **garantiertes Aufräumen** – egal ob der
+Block erfolgreich war oder eine Exception geflogen ist. Datei schließen,
+Lock freigeben, Verbindung trennen, Transaktion zurückrollen, Zeit messen,
+Mock im Test zurücknehmen.
 
-### Java – `try`/`finally` und `try-with-resources`
+### Pythonisch lösen
 
-Klassisches `try`/`finally`:
+`with`-Statement plus zwei Dunder-Methoden: jedes Objekt mit `__enter__`
+und `__exit__` darf hinter `with` stehen. `__exit__` läuft **garantiert** –
+auch wenn im Block eine Exception fliegt.
 
-```java
-BufferedReader r = null;
-try {
-    r = new BufferedReader(new FileReader("a.txt"));
-    // ... arbeiten ...
-} finally {
-    if (r != null) r.close();
-}
-```
-
-Seit Java 7: `try-with-resources` – aber nur für Klassen, die
-`AutoCloseable` implementieren:
-
-```java
-try (BufferedReader r = new BufferedReader(new FileReader("a.txt"))) {
-    // ... arbeiten ...
-}
-```
-
-### Python – `with` für alles
-
-In Python kann **jedes Objekt mit `__enter__` und `__exit__`** hinter `with`
-stehen:
+### Variante 1: Klasse mit `__enter__`/`__exit__`
 
 ```python
 class Zeitmessung:
@@ -570,14 +547,14 @@ print(f"Dauer: {m.dauer_ms:.2f} ms")
 - `exc_wert` – die Exception-Instanz,
 - `exc_tb` – das Traceback-Objekt.
 
-Ein **Rückgabewert `True`** würde die Exception als "behandelt" markieren und
-unterdrücken. `False` (oder `None`) reicht sie weiter – das ist fast immer
-das richtige Verhalten.
+Ein **Rückgabewert `True`** würde die Exception als "behandelt" markieren
+und unterdrücken. `False` (oder `None`) reicht sie weiter — das ist fast
+immer das richtige Verhalten.
 
-### Variante mit `@contextmanager`
+### Variante 2: `@contextmanager`
 
 Wer keine ganze Klasse schreiben möchte: `contextlib.contextmanager` macht
-aus einer Generator-Funktion einen Context Manager:
+aus einer Generator-Funktion einen Context Manager.
 
 ```python
 from contextlib import contextmanager
@@ -601,33 +578,36 @@ with transaktion("Buchung 42") as tx:
 
 `yield` trennt **Setup** von **Teardown**. Eine Exception im `with`-Block
 springt direkt zum `except` der Generator-Funktion. **`raise` am Ende** ist
-wichtig – sonst schluckt der Context Manager die Exception still.
+wichtig — sonst schluckt der Context Manager die Exception still.
 
-### Eingebaute Context Manager
+### Wo das in Python begegnet
 
-Python ist voll davon:
+`with` ist in der Standardbibliothek allgegenwärtig:
 
 ```python
-with open("a.txt") as f: ...                 # Datei schließen
-with threading.Lock(): ...                   # Lock freigeben
-with sqlite3.connect("db") as c: ...         # Transaktion / close
-with tempfile.TemporaryDirectory() as d: ... # Verzeichnis aufräumen
-with mock.patch("modul.funktion"): ...       # Mock im Test rückgängig
+with open("a.txt") as f: ...                  # Datei schließen
+with threading.Lock(): ...                    # Lock freigeben
+with sqlite3.connect("db") as c: ...          # Transaktion / close
+with tempfile.TemporaryDirectory() as d: ...  # Verzeichnis aufräumen
+with mock.patch("modul.funktion"): ...        # Mock im Test rückgängig
+with open("a.txt") as a, open("b.txt") as b:  # mehrere Ressourcen
+    ...
 ```
 
-### Java-Vergleich auf einen Blick
+Auch *async* hat eine eigene Variante (`async with`) für asynchrone
+Ressourcen wie Netzwerkverbindungen oder Datenbank-Sessions.
 
-| Aspekt | Java | Python |
-|---|---|---|
-| Schlüsselwort | `try (...) { ... }` | `with ...:` |
-| Voraussetzung | Klasse implementiert `AutoCloseable` | Klasse hat `__enter__` und `__exit__` |
-| Mehrere Ressourcen | `try (a; b; c)` (Java 7+) | `with a, b, c:` |
-| Generator-Variante | gibt es nicht | `@contextmanager` |
-| Anwendungsbereiche | praktisch nur "schließen" | Zeit, Mocks, Transaktion, Lock, Verzeichnis, ... |
+### Wann braucht man das Pattern *nicht*?
 
-> **Kernlehre:** `try-with-resources` ist ein Spezialfall. Pythons `with` ist
-> ein allgemeiner Mechanismus. Wo Java für Zeitmessung oder Mocking ein
-> manuelles `try/finally` braucht, bekommt Python das Pattern geschenkt.
+Bei Operationen, die nur reine Berechnungen sind und keine externen
+Ressourcen anfassen, ist `with` überflüssig. Wer einen Wert lediglich für
+einen Block braucht, schreibt eine Funktion oder eine lokale Variable —
+keinen Context Manager.
+
+> **Kernlehre:** `with` ist Pythons allgemeiner Mechanismus für *"jetzt
+> etwas tun, danach garantiert aufräumen"*. Datei-Handling ist nur das
+> bekannteste Beispiel — die eigentliche Stärke liegt in der Vielfalt der
+> Anwendungsfälle.
 
 ---
 
@@ -635,62 +615,68 @@ with mock.patch("modul.funktion"): ...       # Mock im Test rückgängig
 
 Aus Zeit­gründen (30 Minuten) nicht in dieser Modul-Einheit:
 
-- **Iterator** – kommt teils schon in Modul 4 vor; in Python via `__iter__` und
-  Generatoren mit `yield` praktisch unsichtbar.
+- **Iterator** – in Python via `__iter__`, `__next__` und Generatoren mit
+  `yield` so tief in die Sprache eingebaut, dass das Pattern fast
+  unsichtbar wird.
 - **Decorator (das Pattern, nicht die `@`-Syntax)** – konzeptuell verwandt
   mit Pythons Funktions-Decorator, würde eine eigene Stunde brauchen.
-- **Command, Template Method, Adapter, Composite, State** – klassische GoF-
-  Patterns, in Python aber oft entweder unauffällig (Funktion statt
+- **Command, Template Method, Adapter, Composite, State** – klassische
+  GoF-Patterns, in Python aber oft unauffällig (Funktion statt
   Command-Klasse) oder durch Duck Typing trivial (Adapter).
 - **Metaklassen-Singleton** – existiert, ist aber für die meisten
   Anwendungsfälle überdimensioniert.
 
-Für Interessierte: Peter Norvigs *"Design Patterns in Dynamic Languages"*
-und Brandon Rhodes' Sammlung *"Python Patterns"* online sind die
+Für Interessierte: Brandon Rhodes' Sammlung *"Python Patterns"* online
+und Peter Norvigs *"Design Patterns in Dynamic Languages"* sind die
 Standard-Referenzen.
 
 ---
 
-## 5.7 Zusammenfassung – Tabelle
+## 5.7 Zusammenfassung
 
-| Pattern | Java-Stil in Python | Pythonische Antwort |
+| Pattern | Python-Mechanismus | Pythonische Idiomatik |
 |---|---|---|
-| Singleton | `__new__` + Klassenvariable | Modul-Singleton, `@singleton`-Decorator |
-| Factory | `if/elif`-Methode | Dict-Dispatch, `@classmethod` |
-| Observer | Listener-Interface mit `abc` | Liste von Callables, `__call__` |
-| Strategy | Strategy-Interface + Klassen | Funktion als Argument, Closure |
-| Context Manager | (existiert in Java so nicht) | `__enter__`/`__exit__`, `@contextmanager` |
+| Singleton | Modul-System, `__new__`, Decorator | Modul-Attribut, selten `@singleton` |
+| Factory | Klassen als first-class Objekte | Dict-Dispatch, `@classmethod` |
+| Observer | Callables (Funktion, Lambda, `__call__`) | Liste von Callbacks |
+| Strategy | Funktionen als first-class Werte | Funktion als Argument, Closure |
+| Context Manager | `__enter__`/`__exit__`, `@contextmanager` | `with`-Statement, vielseitig |
 
-**Der eine Satz, den man mitnehmen sollte:**
+**Vier Sätze zum Mitnehmen:**
 
-> *Viele Java-Patterns sind in Python keine Patterns mehr – sondern Sprache.*
+- *Schön ist besser als hässlich. Einfach ist besser als komplex.*
+- *Pythonische Lösungen nutzen die Sprache, nicht das Pattern.*
+- *Frag dich: welcher Mechanismus trägt das Pattern? — dann benutze ihn direkt.*
+- *Manche Patterns sind in Python keine Patterns mehr, sondern Sprache.*
 
 ---
 
 ## 5.8 Übungsaufgaben
 
 **Aufgabe 1 – Singleton kritisch hinterfragen.** Schreibe eine Klasse
-`Konfiguration` zuerst als `__new__`-Singleton, dann als Modul-Singleton.
+`Konfiguration` einmal als `__new__`-Singleton, einmal als Modul-Singleton.
 Diskutiere: welche Variante ist im Test einfacher zu mocken? Warum?
 
 **Aufgabe 2 – Factory erweitern.** Erweitere die `_TIER_REGISTRY` um einen
-`@registriere`-Decorator (siehe Abschnitt 5.2). Lege drei neue Tierarten an,
-ohne die Factory-Funktion zu ändern.
+`@registriere`-Decorator (siehe Abschnitt 5.2). Lege drei neue Tierarten
+an, ohne die Factory-Funktion zu ändern.
 
 **Aufgabe 3 – Observer mit Filter.** Erweitere `Newsletter` um eine Methode
 `abonnieren_mit_filter(callback, filter_fn)`, die nur dann an `callback`
-weiterleitet, wenn `filter_fn(ausgabe)` wahr ist. Tipp: das ist auch wieder
-ein Strategy.
+weiterleitet, wenn `filter_fn(ausgabe)` wahr ist. Hinweis: `filter_fn` ist
+ebenfalls ein Callable — also ein zweites Strategy-Pattern auf derselben
+Schnittstelle.
 
-**Aufgabe 4 – Strategy im Alltag.** Sortiere eine Liste von `Person`-Objekten
-(Name, Alter) einmal nach Name, einmal nach Alter, einmal nach Länge des
-Namens – ohne `Person` zu ändern. Wo steckt das Strategy?
+**Aufgabe 4 – Strategy im Alltag.** Sortiere eine Liste von `Person`-
+Objekten (Name, Alter) einmal nach Name, einmal nach Alter, einmal nach
+Länge des Namens — ohne `Person` zu ändern. An welcher Stelle steckt das
+Strategy-Pattern?
 
 **Aufgabe 5 – Context Manager schreiben.** Implementiere eine Klasse
 `WechseleVerzeichnis(pfad)`, die im `__enter__` mit `os.chdir` ins
 Zielverzeichnis wechselt und im `__exit__` zurück ins vorherige. Schreibe
-dieselbe Funktionalität noch einmal mit `@contextmanager`.
+dieselbe Funktionalität anschließend mit `@contextmanager`.
 
-**Aufgabe 6 – Diskussion.** Lies einen der folgenden Patterns aus dem
-GoF-Buch (Adapter, Decorator, Iterator) und beschreibe, wie er sich in
-Python idiomatisch umsetzen lässt – oder warum er überflüssig wird.
+**Aufgabe 6 – Pattern-Ökonomie.** Wähle einen der Patterns aus diesem
+Modul und beschreibe in drei Sätzen, **wann du ihn nicht** einsetzen
+würdest. Welcher Punkt aus dem *Zen of Python* spricht dafür?

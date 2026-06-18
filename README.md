@@ -1,12 +1,12 @@
-# Informatik 4 – Von Java zu OOP in Python (Modul 5)
+# Informatik 4 – Modul 5: Pythonische Entwurfsmuster
 
-Begleitmaterial zur Lehrveranstaltung **Informatik 4**, Modul 5: *Pythonische
-Entwurfsmuster*. Ziel: Java-bekannte Patterns (Singleton, Factory, Observer)
-nach Python übertragen – und zeigen, wo Python idiomatische Abkürzungen
-kennt, die Java so nicht hat.
+Begleitmaterial zur Lehrveranstaltung **Informatik 4**, Modul 5:
+*Pythonische Entwurfsmuster*. Ziel: zeigen, welcher Python-Sprachmechanismus
+jeweils ein klassisches Entwurfsmuster trägt — und wann das Pattern in
+Python überflüssig wird.
 
-> *"Was würde ich in Java tun – und wie denkt Python das?"*
-> Viele Java-Patterns sind in Python keine Patterns mehr – sondern Sprache.
+> *"Schön ist besser als hässlich. Einfach ist besser als komplex.
+> Lesbarkeit zählt."* — aus *The Zen of Python*
 
 ---
 
@@ -16,7 +16,7 @@ kennt, die Java so nicht hat.
 |---|---|
 | `modul5_entwurfsmuster.py` | Klassen- und Funktionsdefinitionen für die sieben Abschnitte – wird von `main_modul5.py` importiert |
 | `main_modul5.py` | Ausführbare Demonstrations-Anwendung – zeigt jedes Pattern in Aktion |
-| `MODUL5_LEHRBUCH.md` | Lehrbuch-Dokument zum Selbststudium – ausführliche Erklärungen, Trade-offs, Übungsaufgaben |
+| `MODUL5_LEHRBUCH.md` | Lehrbuch-Dokument zum Selbststudium – ausführliche Erklärungen, Idiomatik-Diskussionen, Übungsaufgaben |
 | `MODUL5_PRESENTATION.md` | Stichpunkt-Notizen zum Üben der Präsentation (~30 Min) |
 
 > **Reihenfolge:** Zuerst `modul5_entwurfsmuster.py` lesen (Konzepte
@@ -50,7 +50,7 @@ python main_modul5.py
 ### Erwartete Ausgabe (Ausschnitt)
 ```
 ============================================================
-  Abschnitt 1: Singleton – Java-Stil mit __new__
+  Abschnitt 1: Singleton – klassisch über __new__
 ============================================================
 logger_a = LoggerJavaStil(Einträge=2)
 logger_b = LoggerJavaStil(Einträge=2)
@@ -65,18 +65,18 @@ Sind es identische Objekte?  logger_a is logger_b -> True
 
 ### `modul5_entwurfsmuster.py` – Sieben Abschnitte
 
-Enthält alle Klassen und Funktionen mit direktem Java-Vergleich. Der
-Java-Code steht jeweils als Kommentar direkt über dem Python-Äquivalent.
-Keine Ausgaben – wird von `main_modul5.py` importiert.
+Enthält alle Klassen und Funktionen mit Python-zentrischer Idiomatik —
+gruppiert nach Pattern und Variante. Keine Ausgaben; wird von
+`main_modul5.py` importiert.
 
-| Abschnitt | Pattern | Inhalt |
+| Abschnitt | Pattern | Python-Mechanismus |
 |---|---|---|
-| 1 | Singleton – Java-Stil | `__new__` + Klassenvariable als Cache |
+| 1 | Singleton – klassisch | `__new__` + Klassenvariable als Cache |
 | 2 | Singleton – Pythonisch | Modul-Singleton, `@singleton`-Decorator |
-| 3 | Factory – Java-Stil | `abc.ABC` + Factory-Klasse mit `if/elif` |
+| 3 | Factory – explizit | `abc.ABC` + Factory-Klasse mit `if/elif` |
 | 4 | Factory – Pythonisch | Dict-Dispatch (Registry), `@classmethod` |
-| 5 | Observer | Liste von Callables statt Listener-Interface, `__call__` |
-| 6 | Strategy | Funktion als Argument, Closures statt Strategy-Klassen |
+| 5 | Observer | Liste von Callables, `__call__` für Beobachter mit Zustand |
+| 6 | Strategy | Funktionen als first-class Argument, Closures |
 | 7 | Context Manager | `__enter__`/`__exit__`, `@contextmanager` |
 
 ### `main_modul5.py` – Demonstrations-Anwendung
@@ -87,14 +87,15 @@ die Präsentation.
 
 ### `MODUL5_LEHRBUCH.md` – Selbststudium
 
-Ausführliches Lehrbuch-Dokument mit zusätzlichen Beispielen, Trade-off-
-Diskussionen (z. B. Singleton als Anti-Pattern), Decorator-Registrierung als
-Factory-Erweiterung, Java-Vergleichstabellen und sechs Übungsaufgaben.
+Ausführliches Lehrbuch-Dokument: pro Pattern *"Das Problem"*, *"Pythonisch
+lösen"*, mehrere Varianten, *"Wo begegnet einem das in Python?"* und
+*"Wann braucht man das Pattern nicht?"*. Plus eine Zusammenfassungstabelle
+und sechs Übungsaufgaben.
 
 ### `MODUL5_PRESENTATION.md` – Präsentations-Notizen
 
 Stichpunkt-Notizen zum Üben des Vortrags: Thesensätze, Kernaussagen, zu
-zeigender Code, Demo-Output-Checks, typische Zwischenfragen und ein
+zeigender Code, Demo-Output-Checks, optionale Speaker-Notes und ein
 Pacing-Plan auf 30 Minuten.
 
 ---
@@ -103,14 +104,14 @@ Pacing-Plan auf 30 Minuten.
 
 Nach Durcharbeitung dieses Moduls können Studierende:
 
-- die drei klassischen Patterns Singleton, Factory und Observer in Python
-  sowohl im Java-Stil als auch idiomatisch umsetzen
-- erklären, **warum** Python für einige Patterns weniger Boilerplate braucht
+- die drei klassischen Patterns Singleton, Factory und Observer pythonisch
+  umsetzen — und benennen, **welcher Sprachmechanismus** sie jeweils trägt
+- erklären, warum Python für einige Patterns kaum Boilerplate braucht
   (first-class Funktionen, Klassen als Objekte, Modul-System)
-- entscheiden, wann ein Pattern in Python **überflüssig** ist (z. B.
-  Strategy mit Funktionen statt Klassen)
-- Context Manager als Pythons Antwort auf *"etwas muss zuverlässig danach
-  passieren"* einsetzen
+- entscheiden, wann ein Pattern in Python **überflüssig** ist (Strategy
+  mit einer einfachen Funktion, Singleton durch ein Modul-Attribut)
+- Context Manager als verallgemeinerten Mechanismus für *"etwas muss
+  zuverlässig danach passieren"* einsetzen
 
 ---
 
@@ -132,13 +133,14 @@ Nach Durcharbeitung dieses Moduls können Studierende:
 
 ## Hinweise für Studierende
 
-> **Nicht einfach übersetzen – auf Python denken.**
-> Das Ziel ist nicht, Java-Patterns in Python-Syntax umzuschreiben, sondern
-> die Sprache idiomatisch zu verwenden. Ein guter Test: Würde ein erfahrener
-> Python-Entwickler den Code so schreiben?
+> **Auf Python denken — nicht Patterns aus anderen Sprachen übersetzen.**
+> Das Ziel ist nicht, ein bekanntes Pattern in Python-Syntax umzuschreiben,
+> sondern den passenden Python-Mechanismus zu finden, der das Pattern oft
+> klein oder unsichtbar macht.
 
-- Kommentare mit `# Java:` zeigen immer das Java-Äquivalent
-- Abschnitte können unabhängig voneinander gelesen werden
+- Jeder Pattern-Abschnitt im Lehrbuch endet mit *"Wann braucht man das
+  Pattern nicht?"* — ebenso wichtig wie die Antwort darauf, *wie* man es
+  umsetzt.
 - Der Demo-Output zeigt nicht nur Erfolgs-, sondern auch Fehlerfälle (z. B.
   unbekannte Tierart in Abschnitt 3, ROLLBACK in Abschnitt 7) – beides
   bewusst, damit man das Verhalten unter Stress sieht.

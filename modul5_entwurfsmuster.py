@@ -1,12 +1,15 @@
 # =============================================================================
-# Informatik 4 – Von Java zu OOP in Python
+# Informatik 4
 # Klassenbibliothek – Modul 5: Pythonische Entwurfsmuster
 #
 # Diese Datei enthält ausschließlich Klassen- und Funktionsdefinitionen –
 # keine Ausgaben. Sie wird von main_modul5.py importiert.
 #
-# Kommentare erklären jeweils den Vergleich zu Java.
-# Roter Faden: "Was würde ich in Java tun – und wie denkt Python das?"
+# Roter Faden: Welcher Python-Mechanismus trägt das jeweilige Pattern?
+#   - Modul-System (Singleton)
+#   - Dunder-Methoden (__new__, __call__, __enter__/__exit__)
+#   - Klassen und Funktionen als first-class Objekte (Factory, Strategy)
+#   - Callables (Observer, Strategy)
 # =============================================================================
 
 from __future__ import annotations
@@ -16,26 +19,23 @@ from typing import Callable
 
 
 # -----------------------------------------------------------------------------
-# 1. SINGLETON – JAVA-STIL IN PYTHON
+# 1. SINGLETON – DER KLASSISCHE WEG ÜBER __new__
 # -----------------------------------------------------------------------------
-# Java:
-#   public class Logger {
-#       private static Logger instance;
-#       private Logger() {}
-#       public static Logger getInstance() {
-#           if (instance == null) instance = new Logger();
-#           return instance;
-#       }
-#   }
+# Ziel: Von der Klasse soll es genau eine Instanz geben, egal wie oft jemand
+# sie "erzeugt". Python bietet dafür den Einstiegspunkt __new__: diese
+# Dunder-Methode erzeugt das Objekt selbst und läuft VOR __init__. Wir cachen
+# die einzige Instanz als Klassenattribut.
 #
-# Python kann das nachbauen – über die Dunder-Methode __new__, die VOR __init__
-# läuft und das Objekt selbst erzeugt. Wir cachen die Instanz als Klassenattribut.
+# Der Klassenname trägt "JavaStil" als Etikett, weil dieser explizite Weg
+# konzeptionell der ist, den man aus klassischen OO-Sprachen kennt – der
+# pythonische Weg folgt im nächsten Abschnitt.
 
 class LoggerJavaStil:
-    _instanz: "LoggerJavaStil | None" = None      # Klassenattribut (wie static)
+    _instanz: "LoggerJavaStil | None" = None      # Klassenattribut als Cache
 
     def __new__(cls):
-        # __new__ ist Pythons Pendant zu Javas "new" – aber überschreibbar.
+        # __new__ ist der Eingriffspunkt: hier entscheiden wir, ob ein
+        # neues Objekt entsteht – oder das bereits existierende zurückkommt.
         if cls._instanz is None:
             cls._instanz = super().__new__(cls)
             cls._instanz.eintraege = []           # einmalige Initialisierung
@@ -51,15 +51,14 @@ class LoggerJavaStil:
 # -----------------------------------------------------------------------------
 # 2. SINGLETON – PYTHONISCH (MODUL + DECORATOR)
 # -----------------------------------------------------------------------------
-# Variante A: Das Modul selbst IST ein Singleton.
-# Importiere ich "konfiguration" zweimal, bekomme ich dasselbe Objekt zurück.
-# Java braucht dafür eine ganze Klasse – in Python reichen Modul-Variablen.
+# Pythons Modul-System cacht jedes Modul beim ersten Import. Variablen auf
+# Modul-Ebene existieren damit genau einmal im Prozess – das ist der
+# eigentliche pythonische Singleton-Mechanismus, ohne irgendein Pattern.
 #
-# (In der Praxis wären das einfach Variablen auf Modul-Ebene. Hier verpacken
-#  wir sie zur Demo in einem kleinen Namespace.)
+# Variante A: das Modul-Attribut "konfiguration" IST der Singleton.
 
 class _Konfiguration:
-    """Wird einmalig instanziiert und als 'konfiguration' exportiert."""
+    """Wird einmalig instanziiert und als Modul-Attribut 'konfiguration' exportiert."""
     def __init__(self) -> None:
         self.sprache = "de"
         self.debug = False
@@ -71,11 +70,12 @@ class _Konfiguration:
 konfiguration = _Konfiguration()      # <-- DAS ist der Singleton: das Modul-Attribut
 
 
-# Variante B: Singleton-Decorator – wiederverwendbar für beliebige Klassen.
-# Java kennt nichts Vergleichbares; man müsste jede Klasse einzeln umbauen.
+# Variante B: ein wiederverwendbarer @singleton-Decorator. Decorators sind in
+# Python first-class – sie nehmen eine Klasse entgegen und geben etwas zurück,
+# das sich beim Aufruf wie eine Klasse verhält, aber die Instanz cacht.
 
 def singleton(klasse):
-    """Decorator – macht aus jeder Klasse einen Singleton."""
+    """Decorator – macht aus jeder dekorierten Klasse einen Singleton."""
     instanzen: dict = {}
 
     def hole_instanz(*args, **kwargs):
@@ -97,20 +97,15 @@ class Datenbankverbindung:
 
 
 # -----------------------------------------------------------------------------
-# 3. FACTORY – JAVA-STIL IN PYTHON
+# 3. FACTORY – DER EXPLIZITE WEG MIT if/elif
 # -----------------------------------------------------------------------------
-# Java:
-#   interface Tier { String laut(); }
-#   class Hund implements Tier { public String laut() { return "Wuff"; } }
-#   class TierFactory {
-#       public static Tier erzeuge(String art) {
-#           if (art.equals("hund")) return new Hund();
-#           else if (art.equals("katze")) return new Katze();
-#           else throw new IllegalArgumentException(art);
-#       }
-#   }
+# Der Aufrufer soll ein Objekt eines passenden Untertyps bekommen, ohne den
+# konkreten Typ zu kennen. Hier zuerst die explizite Variante: eine
+# Factory-Klasse mit einer Verzweigung pro Art. Sauber, lesbar, aber jede neue
+# Tierart braucht einen neuen if-Zweig.
 #
-# Direkte Übersetzung nach Python – mit abc.ABC statt interface.
+# abc.ABC + @abstractmethod legen den gemeinsamen Vertrag fest, an den sich
+# alle Untertypen halten müssen.
 
 class Tier(ABC):
     @abstractmethod
@@ -144,9 +139,11 @@ class TierFactoryJavaStil:
 # -----------------------------------------------------------------------------
 # 4. FACTORY – PYTHONISCH (DICT-DISPATCH + CLASSMETHOD)
 # -----------------------------------------------------------------------------
+# Klassen sind in Python first-class Objekte: sie lassen sich in Listen und
+# Dicts speichern, als Argument übergeben, aus Funktionen zurückgeben.
+# Damit wird aus der Factory ein Lookup – kein if/elif mehr nötig.
+#
 # Variante A: Dict-Dispatch / Registry.
-# Klassen sind in Python first-class Objekte – wir legen sie einfach in ein Dict
-# und schlagen nach. Kein if/elif, kein switch, kein neuer Code beim Hinzufügen.
 
 _TIER_REGISTRY: dict[str, type[Tier]] = {
     "hund":  Hund,
@@ -160,9 +157,9 @@ def erzeuge_tier(art: str) -> Tier:
     return _TIER_REGISTRY[art]()           # Klasse aus dem Dict aufrufen
 
 
-# Variante B: Alternativer Konstruktor als @classmethod.
-# Statt einer separaten Factory-Klasse landet die Erzeugungslogik DIREKT in der
-# Klasse, die sie betrifft – analog zum Kreis.aus_durchmesser() aus Modul 1.
+# Variante B: @classmethod als alternativer Konstruktor. Wenn die Varianten
+# schon zur Programmierzeit feststehen, lebt die Erzeugungslogik dort, wo sie
+# hingehört – in der Klasse selbst, mit aussagekräftigen Namen.
 
 class Pizza:
     def __init__(self, belaege: list[str]) -> None:
@@ -181,25 +178,16 @@ class Pizza:
 
 
 # -----------------------------------------------------------------------------
-# 5. OBSERVER – JAVA-INTERFACE vs. PYTHON-CALLABLES
+# 5. OBSERVER – CALLABLES STATT LISTENER-INTERFACE
 # -----------------------------------------------------------------------------
-# Java:
-#   interface Beobachter { void aktualisiere(String ereignis); }
-#   class Newsletter {
-#       private List<Beobachter> beobachter = new ArrayList<>();
-#       public void anmelden(Beobachter b) { beobachter.add(b); }
-#       public void veroeffentliche(String s) {
-#           for (Beobachter b : beobachter) b.aktualisiere(s);
-#       }
-#   }
-#
-# Java BRAUCHT das Interface, sonst weiß der Newsletter nicht, welche Methode
-# er auf den Beobachtern aufrufen soll. Python braucht das nicht: jede Funktion
-# ist ein Objekt, das man aufrufen kann (Callable).
+# Ein Subject (Newsletter) hält Subscriber auf dem Laufenden, ohne ihren
+# konkreten Typ zu kennen. In Python ist alles, was man mit (...) aufrufen
+# kann, ein Callable: gewöhnliche Funktion, Lambda, gebundene Methode oder
+# Objekt mit __call__. Wir brauchen also kein gemeinsames Interface, sondern
+# nur eine Liste von Callables.
 
 class Newsletter:
     def __init__(self) -> None:
-        # Liste von Callables – statt einer Liste von "Beobachter"-Objekten.
         self._abonnenten: list[Callable[[str], None]] = []
 
     def abonnieren(self, callback: Callable[[str], None]) -> None:
@@ -210,14 +198,14 @@ class Newsletter:
 
     def veroeffentlichen(self, ausgabe: str) -> None:
         for callback in self._abonnenten:
-            callback(ausgabe)              # einfach aufrufen – kein Interface nötig
+            callback(ausgabe)              # einfach aufrufen – mehr braucht es nicht
 
     def __str__(self) -> str:
         return f"Newsletter(Abonnenten={len(self._abonnenten)})"
 
 
-# Wenn ein Beobachter doch Zustand braucht: ganz normale Klasse mit __call__.
-# __call__ macht ein Objekt aufrufbar – wie ein Lambda mit Gedächtnis.
+# Wenn ein Abonnent Zustand mitschleppen muss: eine normale Klasse mit
+# __call__ machen ein Objekt aufrufbar wie eine Funktion – mit Gedächtnis.
 
 class ZaehlenderAbonnent:
     def __init__(self, name: str) -> None:
@@ -234,23 +222,16 @@ class ZaehlenderAbonnent:
 # -----------------------------------------------------------------------------
 # 6. STRATEGY – FUNKTIONEN ALS FIRST-CLASS OBJEKTE
 # -----------------------------------------------------------------------------
-# Java:
-#   interface RabattStrategie { double berechne(double preis); }
-#   class ProzentRabatt implements RabattStrategie { ... }
-#   class FixerRabatt   implements RabattStrategie { ... }
-#   class Warenkorb {
-#       private RabattStrategie strategie;
-#       public Warenkorb(RabattStrategie s) { this.strategie = s; }
-#   }
-#
-# In Python ist eine Funktion bereits ein Objekt – wir übergeben sie direkt.
-# Kein Interface, keine Strategy-Klasse, keine zwei Implementierungs-Klassen.
+# Funktionen sind in Python ganz normale Werte – man übergibt sie wie
+# Strings oder Zahlen. Eine "Strategie" ist deshalb keine Klassenhierarchie,
+# sondern schlicht eine Funktion. Mit Closures kann man sie parametrisieren:
+# eine Funktion gibt eine Funktion zurück, die den Parameter im Scope behält.
 
 def kein_rabatt(preis: float) -> float:
     return preis
 
 def prozent_rabatt(prozent: float) -> Callable[[float], float]:
-    """Closure: gibt eine Funktion zurück, die den Prozentsatz 'mitschleppt'."""
+    """Closure: gibt eine Funktion zurück, die den Prozentsatz mitschleppt."""
     def anwenden(preis: float) -> float:
         return preis * (1 - prozent / 100)
     return anwenden
@@ -264,7 +245,7 @@ def fixer_rabatt(betrag: float) -> Callable[[float], float]:
 class Warenkorb:
     def __init__(self, strategie: Callable[[float], float] = kein_rabatt) -> None:
         self.artikel: list[tuple[str, float]] = []
-        self.strategie = strategie         # nur eine Funktion – kein Interface
+        self.strategie = strategie         # nur eine Funktion, kein Interface
 
     def hinzufuegen(self, name: str, preis: float) -> None:
         self.artikel.append((name, preis))
@@ -278,21 +259,17 @@ class Warenkorb:
 
 
 # -----------------------------------------------------------------------------
-# 7. CONTEXT MANAGER – PYTHONS "TRY-WITH-RESOURCES" AUF STEROIDEN
+# 7. CONTEXT MANAGER – ZUVERLÄSSIGES AUFRÄUMEN MIT with
 # -----------------------------------------------------------------------------
-# Java (seit Java 7):
-#   try (BufferedReader r = new BufferedReader(new FileReader("a.txt"))) {
-#       ...
-#   }
-#   funktioniert nur für Klassen, die AutoCloseable implementieren.
+# Manche Operationen brauchen garantiertes Aufräumen – egal ob der Block
+# erfolgreich war oder eine Exception fliegt. Dateien schließen, Locks
+# freigeben, Zeit messen, Transaktionen abschließen, Mocks zurücknehmen.
 #
-# Python: jedes Objekt mit __enter__ und __exit__ kann hinter "with" stehen.
-# __exit__ läuft IMMER – auch wenn im Block eine Exception fliegt. Damit
-# eignet sich der Context Manager für alles, was ein "danach unbedingt"
-# braucht: Dateien schließen, Locks freigeben, Zeitmessung, Transaktionen.
+# Pythons Antwort: jedes Objekt mit __enter__ und __exit__ darf hinter "with"
+# stehen. __exit__ läuft GARANTIERT – das ist der eigentliche Wert.
 
 class Zeitmessung:
-    """Misst die Dauer eines with-Blocks. In Java käme dafür ein try/finally."""
+    """Misst die Dauer eines with-Blocks – mit nur zwei Dunder-Methoden."""
 
     def __init__(self, label: str) -> None:
         self.label = label
@@ -301,7 +278,7 @@ class Zeitmessung:
     def __enter__(self) -> "Zeitmessung":
         import time
         self._start = time.perf_counter()
-        return self                         # wird an 'as'-Variable gebunden
+        return self                         # wird an die 'as'-Variable gebunden
 
     def __exit__(self, exc_typ, exc_wert, exc_tb) -> bool:
         import time
@@ -310,8 +287,8 @@ class Zeitmessung:
         return False
 
 
-# Variante B: @contextmanager – aus einer Generator-Funktion einen
-# Context Manager machen. Spart die Klasse komplett ein.
+# Variante B: @contextmanager – aus einer Generator-Funktion einen Context
+# Manager machen. yield trennt "Setup" von "Teardown" und spart die Klasse.
 
 @contextmanager
 def transaktion(name: str):
