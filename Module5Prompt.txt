@@ -841,3 +841,184 @@ Folgesitzung: Refokussierung weg vom Java-Vergleich
   Was als Nächstes — eine Stelle vertiefen, oder Stand ansehen und dann
   Commit-Entscheidung treffen?
 
+
+================================================================================
+Folgesitzung: MVC-Integration, kritische Prüfung und zweisprachiger
+              Lehrbuch-Ausbau
+================================================================================
+
+❯ For a university module, I am a student presenting Module 5 (the currently
+  active branch) to the course. Read through all of the files to understand the
+  full context. Several changes must be made a) Model View Controller must be
+  integrated (as it has been covered in previous courses it does not need to be
+  covered in great detail, 2-3 minutes is acceptable). MVC is important as the
+  pattern will appear in the group projects, which must implement REST-Backends.
+  There is an Observer pattern section which could be combined into the MVC
+  section, but having at least a basic running example akin to the other
+  patterns for MVC would be good. The view does not need to be anything special,
+  a JSON response could be sufficient, or perhaps moving a single piece on a
+  ASCII art chessboard. As for a goal, the goal should be that my presentation
+  takes 20 minutes. The strategy pattern and context pattern can be kept as
+  bonus, but should be labeled as bonus/exkurs, as I do not know if there will
+  still be time to present those.
+
+● I'll start by exploring the project structure to understand the full context
+  of Module 5.
+
+  ⎿  Listed files: main_modul5.py, modul5_entwurfsmuster.py, MODUL5_LEHRBUCH.md,
+     MODUL5_PRESENTATION.md, README.md, Module5Prompt.txt
+
+● Read 5 files (ctrl+o to expand)
+
+● I've read the full Module 5 context. Current state: 7 Abschnitte, ~30 Min.
+  Ziel dieser Sitzung: MVC integrieren (Bezug zu den REST-Backends der
+  Gruppenprojekte), ein lauffähiges MVC-Beispiel, Observer einklappen, auf 20
+  Min takten, Strategy + Context Manager als Bonus auszeichnen.
+
+  Vorgeschlagene 20-Min-Kernstruktur:
+  ┌────────┬─────────────────────────────────────────────┬──────────┐
+  │  –     │ Einstieg (GoF, Norvig, Zen)                 │ 2 Min    │
+  │  1     │ Singleton (klassisch + pythonisch)          │ 3 Min    │
+  │  2     │ Factory (explizit → pythonisch)             │ 3 Min    │
+  │  3     │ Observer → MVC (Mechanismus + MVC-Demo)     │ 6 Min    │
+  │  –     │ Abschluss (Tabelle)                         │ 1-2 Min  │
+  │ Exkurs │ Strategy + Context Manager (Bonus)          │ –        │
+  └────────┴─────────────────────────────────────────────┴──────────┘
+
+  Zwei Design-Entscheidungen sind deine — sie ändern, was ich baue:
+
+● User answered Claude's questions:
+  ⎿  · Wie soll die MVC-Demo ihre View(s) rendern? → Beide: JSON (REST-nah) +
+       ASCII-Brett (visuell); zwei Views beobachten dasselbe Model
+     · Observer relativ zu MVC? → In MVC einklappen (Observer = der Mechanismus
+       hinter der Model→View-Kopplung)
+
+● Update(modul5_entwurfsmuster.py)
+  ⎿  MVC-Klassen (Abschnitt 6): Schachbrett (Model mit Observer-Liste),
+     ascii_view + json_view, Schachsteuerung (Controller); Strategy/Context
+     Manager zu "Exkurs 1/2" umetikettiert. +90 lines (ctrl+o to expand)
+
+● Update(main_modul5.py)
+  ⎿  demo_mvc() ergänzt; Bonus-Demos umbenannt; __main__ in Kern + Exkurs
+     gegliedert. +45 lines (ctrl+o to expand)
+
+● Update(MODUL5_PRESENTATION.md), Update(MODUL5_LEHRBUCH.md), Update(README.md)
+  ⎿  Präsentation auf 20-Min-Kern neu getaktet (Pacing-Tabelle, FAQ,
+     REST-Brücke); Lehrbuch §5.4 MVC; README-Tabelle + Zeit 30→20 Min.
+
+● Bash(python main_modul5.py)
+  ⎿  Abschnitt 6: König zieht e1 → e2 → e4, beide Views aktualisieren sich;
+     ungültiger Zug 'z9' -> ValueError. exit=0  (alle Abschnitte ok)
+
+● Fertig: MVC integriert, Observer eingeklappt, auf 20 Min getaktet, Strategy +
+  Context Manager als Exkurs. Kein Commit/Push.
+
+❯ I was looking at demo_singleton_pythonisch (Variante A, Modul-Singleton).
+  While of course this runs, I noticed that it does not demonstrate the actual
+  principle — it shows that the config exists once, but not *how it cannot exist
+  more than once*. I also find the explanation "Pythons Modul-System cacht jedes
+  Modul beim ersten Import." to lack depth. This specific case needs to be
+  improved, but it is also a good opportunity to check that all other examples
+  demonstrate the *spirit* of the concepts, rather than being technically
+  "correct" (runs) but not "presentation worthy" with a "roter Faden". Analyze
+  all parts critically to ensure there are no further mistakes like that.
+
+● Read(main_modul5.py) — jede Demo gegen die Frage geprüft: "zeigt sie das
+  Prinzip — oder nur lauffähigen Code?"
+
+● 7 von 9 Abschnitten bestehen; 2 echte Lücken (gleicher Fehlertyp):
+  ┌──────────────────────────┬──────────────────────────────────────────┬─────┐
+  │ 2 · Singleton (Modul)    │ zeigt nur, DASS es existiert — nicht, dass │ Fix │
+  │                          │ es nur einmal existieren kann              │     │
+  │ 4 · Factory Dict-Dispatch│ gleiche Ausgabe wie if/elif; der Vorteil   │ Fix │
+  │                          │ (Laufzeit-Erweiterung) wird nie gezeigt    │     │
+  └──────────────────────────┴──────────────────────────────────────────┴─────┘
+
+● Update(main_modul5.py), Update(modul5_entwurfsmuster.py)
+  ⎿  Singleton-Demo: zwei Zugriffswege -> A is B -> True, Änderung an A bei B
+       sichtbar, sys.modules-Caching erklärt (run-once, Konvention).
+     Dict-Dispatch-Demo: Drache zur Laufzeit registriert, Factory unverändert
+       -> Open/Closed sichtbar.
+
+● Bash(python main_modul5.py)
+  ⎿  exit=0; Abschnitte 2 und 4 zeigen jetzt das Prinzip. Lehrbuch + Präsentation
+     entsprechend nachgezogen.
+
+❯ Analyze the presentation you have designed and look for factual errors, e.g.
+  theory, oversimplifications, and statements that honestly raise more questions
+  than they answer (perhaps making an excellent point but stopping before
+  reaching it — e.g. "das Modul-Attribut ist Konvention (man könnte
+  _Konfiguration() erneut aufrufen)").
+
+● Claim-für-Claim-Audit über Notizen, Lehrbuch, Code-Kommentare und README.
+  Reine Analyse, noch keine Änderungen. Ergebnis gestaffelt:
+  ⎿  Tier 1 (sachlich falsch / irreführend):
+       1. MVC↔REST inkonsistent — Observer steckt im klassischen GUI-MVC, NICHT
+          im pull-basierten REST; "ein REST-Backend ist MVC" zu stark.
+       2. dict.from_keys existiert nicht (richtig: dict.fromkeys).
+       3. dataclasses.field(default_factory=…) falsch unter Observer einsortiert.
+       4. Modul-Singleton-"Konvention" bricht den Gedanken ab.
+     Tier 2 (Vereinfachungen):
+       5. __exit__ "garantiert" ohne Vorbehalt.
+       6. @singleton-Nachteil (isinstance/Vererbung brechen) fehlt.
+       7. Norvig wörtlich zitiert statt sinngemäß.
+       8. signal.signal ist Single-Handler, kein 1:n-Observer.
+       9. json.loads/pickle.loads als "Factory" zu locker.
+     7 weitere geprüfte Aussagen als korrekt bestätigt. Vorschlag: alle fixen.
+
+❯ Correct all.
+
+● Alle neun Punkte korrigiert, konsistent über Code-Kommentare, Lehrbuch und
+  Präsentation:
+  ⎿  Update(MODUL5_LEHRBUCH.md), Update(MODUL5_PRESENTATION.md),
+     Update(modul5_entwurfsmuster.py), Update(main_modul5.py)
+  - MVC: klassisch (push, Observer) vs. Web/REST (pull, kein Observer) getrennt;
+    "ist MVC" zu "lässt sich als MVC strukturieren" entschärft; neue FAQ-Zeile
+    "Wo steckt der Observer in meinem Flask-Projekt? → Nirgends".
+  - dict.fromkeys korrigiert; dataclasses aus Observer entfernt; Modul-Singleton-
+    Gedanke vervollständigt (zwei Wege zu einer zweiten Instanz).
+  - __exit__-Vorbehalt (nur wenn __enter__ erfolgreich; harter Kill); @singleton-
+    Preis; Norvig-Paraphrase (1996, Lisp/Dylan); signal als Single-Handler;
+    json/pickle "verwandt, nicht Factory".
+
+● Bash(python main_modul5.py)  ⎿  exit=0, keine Regression.
+
+❯ Now go through the Lehrbuch and greatly expand it. Assume the audience has 0
+  experience with Python (going overboard in places is fine, the point is no
+  unexplained jargon); a bachelor student with some Java knowledge should
+  understand everything. In addition, the doc should contain an English
+  translation of everything.
+
+● Entscheidung: zweiteilig — Teil A (Deutsch, ausgebaut), Teil B (vollständige
+  englische Übersetzung). Lehrbuch inkrementell neu aufgebaut.
+
+● Write(MODUL5_LEHRBUCH.md) + Edits
+  ⎿  ~900 → 3092 Zeilen. (ctrl+o to expand)
+
+● Inhaltlich:
+  - Neuer "Python-Crashkurs für Java-Kenner" (10 Punkte: Einrückung, dynamische
+    Typen, self/__init__, None/is, dict, f-Strings, import, "alles ist Objekt").
+  - Vier wiederkehrende Kästen: Begriff / Aus Java bekannt / Pythonisch gedacht
+    / Stolperstein; jeder Fachbegriff beim ersten Auftreten erklärt.
+  - Alle Muster mit Zeile-für-Zeile-Erklärung; Glossar (~40 Begriffe). Alle
+    vorherigen Korrekturen beibehalten.
+
+● Bash(grep Struktur / wc -l)
+  ⎿  Teil A + Teil B vollständig, keine Reste-Marker, 3092 Zeilen. Begleitende
+     .py unverändert, läuft.
+
+❯ Overall great. The "Double import under two names" explanation is a little
+  confusing (what is being imported as what). Other than that, great work. Give
+  the presentation a once over, then it is time to move on to nearly the final
+  steps.
+
+● Update(MODUL5_LEHRBUCH.md ×2), Update(MODUL5_PRESENTATION.md)
+  ⎿  Doppel-Import-Erklärung in beiden Sprachen UND der Präsentation neu gefasst.
+     Kernpunkt jetzt explizit: sys.modules wird nach dem *Namen* indiziert, nicht
+     nach dem Dateipfad — dieselbe Datei kann als "__main__" (direkt gestartet)
+     und als "konfiguration" (importiert) doppelt landen -> zwei Instanzen.
+
+● Read(MODUL5_PRESENTATION.md) — komplett durchgesehen.
+  ⎿  Konsistent, Pacing 20 Min stimmt, alle Korrekturen reflektiert. Keine
+     weiteren Änderungen nötig.
+

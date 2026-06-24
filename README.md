@@ -14,10 +14,10 @@ Python überflüssig wird.
 
 | Datei | Beschreibung |
 |---|---|
-| `modul5_entwurfsmuster.py` | Klassen- und Funktionsdefinitionen für die sieben Abschnitte – wird von `main_modul5.py` importiert |
+| `modul5_entwurfsmuster.py` | Klassen- und Funktionsdefinitionen für sechs Abschnitte + zwei Exkurse – wird von `main_modul5.py` importiert |
 | `main_modul5.py` | Ausführbare Demonstrations-Anwendung – zeigt jedes Pattern in Aktion |
 | `MODUL5_LEHRBUCH.md` | Lehrbuch-Dokument zum Selbststudium – ausführliche Erklärungen, Idiomatik-Diskussionen, Übungsaufgaben |
-| `MODUL5_PRESENTATION.md` | Stichpunkt-Notizen zum Üben der Präsentation (~30 Min) |
+| `MODUL5_PRESENTATION.md` | Stichpunkt-Notizen zum Üben der Präsentation (~20 Min Kern + Exkurse) |
 
 > **Reihenfolge:** Zuerst `modul5_entwurfsmuster.py` lesen (Konzepte
 > verstehen), dann `main_modul5.py` ausführen (Konzepte in Aktion sehen).
@@ -63,7 +63,7 @@ Sind es identische Objekte?  logger_a is logger_b -> True
 
 ## Was wird behandelt?
 
-### `modul5_entwurfsmuster.py` – Sieben Abschnitte
+### `modul5_entwurfsmuster.py` – Sechs Abschnitte + zwei Exkurse
 
 Enthält alle Klassen und Funktionen mit Python-zentrischer Idiomatik —
 gruppiert nach Pattern und Variante. Keine Ausgaben; wird von
@@ -76,8 +76,9 @@ gruppiert nach Pattern und Variante. Keine Ausgaben; wird von
 | 3 | Factory – explizit | `abc.ABC` + Factory-Klasse mit `if/elif` |
 | 4 | Factory – Pythonisch | Dict-Dispatch (Registry), `@classmethod` |
 | 5 | Observer | Liste von Callables, `__call__` für Beobachter mit Zustand |
-| 6 | Strategy | Funktionen als first-class Argument, Closures |
-| 7 | Context Manager | `__enter__`/`__exit__`, `@contextmanager` |
+| 6 | MVC | Model/View/Controller auf Observer-Basis – Brücke zum REST-Backend |
+| Exkurs 1 | Strategy *(Bonus)* | Funktionen als first-class Argument, Closures |
+| Exkurs 2 | Context Manager *(Bonus)* | `__enter__`/`__exit__`, `@contextmanager` |
 
 ### `main_modul5.py` – Demonstrations-Anwendung
 
@@ -90,13 +91,13 @@ die Präsentation.
 Ausführliches Lehrbuch-Dokument: pro Pattern *"Das Problem"*, *"Pythonisch
 lösen"*, mehrere Varianten, *"Wo begegnet einem das in Python?"* und
 *"Wann braucht man das Pattern nicht?"*. Plus eine Zusammenfassungstabelle
-und sechs Übungsaufgaben.
+und sieben Übungsaufgaben.
 
 ### `MODUL5_PRESENTATION.md` – Präsentations-Notizen
 
 Stichpunkt-Notizen zum Üben des Vortrags: Thesensätze, Kernaussagen, zu
 zeigender Code, Demo-Output-Checks, optionale Speaker-Notes und ein
-Pacing-Plan auf 30 Minuten.
+Pacing-Plan auf 20 Minuten (Kern) mit Strategy/Context Manager als Exkurs.
 
 ---
 
@@ -108,6 +109,9 @@ Nach Durcharbeitung dieses Moduls können Studierende:
   umsetzen — und benennen, **welcher Sprachmechanismus** sie jeweils trägt
 - erklären, warum Python für einige Patterns kaum Boilerplate braucht
   (first-class Funktionen, Klassen als Objekte, Modul-System)
+- **MVC** als Architektur-Muster auf Observer-Basis verstehen und die Brücke
+  zum **REST-Backend** der Gruppenprojekte schlagen (Controller = Endpoint,
+  View = JSON-Antwort, Model = Domänenzustand)
 - entscheiden, wann ein Pattern in Python **überflüssig** ist (Strategy
   mit einer einfachen Funktion, Singleton durch ein Modul-Attribut)
 - Context Manager als verallgemeinerten Mechanismus für *"etwas muss
@@ -142,8 +146,9 @@ Nach Durcharbeitung dieses Moduls können Studierende:
   Pattern nicht?"* — ebenso wichtig wie die Antwort darauf, *wie* man es
   umsetzt.
 - Der Demo-Output zeigt nicht nur Erfolgs-, sondern auch Fehlerfälle (z. B.
-  unbekannte Tierart in Abschnitt 3, ROLLBACK in Abschnitt 7) – beides
-  bewusst, damit man das Verhalten unter Stress sieht.
+  unbekannte Tierart in Abschnitt 3, ungültiger Zug `z9` in Abschnitt 6,
+  ROLLBACK in Exkurs 2) – beides bewusst, damit man das Verhalten unter
+  Stress sieht.
 
 ---
 

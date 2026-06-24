@@ -13,6 +13,7 @@
 # =============================================================================
 
 from __future__ import annotations
+import json
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Callable
@@ -51,9 +52,19 @@ class LoggerJavaStil:
 # -----------------------------------------------------------------------------
 # 2. SINGLETON – PYTHONISCH (MODUL + DECORATOR)
 # -----------------------------------------------------------------------------
-# Pythons Modul-System cacht jedes Modul beim ersten Import. Variablen auf
-# Modul-Ebene existieren damit genau einmal im Prozess – das ist der
-# eigentliche pythonische Singleton-Mechanismus, ohne irgendein Pattern.
+# Beim allerersten Import führt Python den gesamten Modul-Code GENAU EINMAL
+# aus (dabei läuft auch die Zeile 'konfiguration = _Konfiguration()') und legt
+# das fertige Modulobjekt in sys.modules ab – einem prozessweiten Cache-Dict.
+# Jeder spätere "import modul5_entwurfsmuster", egal aus welcher Datei, findet
+# das Modul dort und gibt es zurück, OHNE den Code erneut auszuführen. Die
+# Instanz entsteht also genau einmal pro Prozess und wird von allen Importeuren
+# geteilt – das ist der pythonische Singleton, getragen vom Importsystem statt
+# von Pattern-Code.
+#
+# Zur Ehrlichkeit: erzwungen ist das nicht. Wer _Konfiguration() von Hand
+# erneut aufruft, bekommt ein zweites Objekt. Die Garantie "nur einer" beruht
+# auf der Konvention, immer das Modul-Attribut zu verwenden – während der
+# @singleton-Decorator (Variante B) die Einzigkeit tatsächlich erzwingt.
 #
 # Variante A: das Modul-Attribut "konfiguration" IST der Singleton.
 
@@ -220,7 +231,92 @@ class ZaehlenderAbonnent:
 
 
 # -----------------------------------------------------------------------------
-# 6. STRATEGY – FUNKTIONEN ALS FIRST-CLASS OBJEKTE
+# 6. MVC – MODEL / VIEW / CONTROLLER (BAUT AUF OBSERVER AUF)
+# -----------------------------------------------------------------------------
+# MVC trennt drei Verantwortlichkeiten: das MODEL hält den Zustand und die
+# Fachlogik, die VIEW stellt ihn dar, der CONTROLLER nimmt Eingaben entgegen
+# und ändert das Model.
+#
+# Achtung, zwei Spielarten:
+#   - Klassisches/GUI-MVC ("push"): das Model BENACHRICHTIGT seine Views bei
+#     Änderung – genau das Observer-Pattern aus Abschnitt 5. Das zeigt diese
+#     Demo: das Model hält eine Liste von Callables (die Views) und ruft sie
+#     auf. Es kennt seine Views nicht im Detail – nur, dass sie aufrufbar sind.
+#   - Web-/REST-MVC ("pull"): eine HTTP-Anfrage löst alles aus, der Controller
+#     baut die Antwort selbst zusammen – KEIN Observer, keine Benachrichtigung.
+#
+# Warum hier? In den Gruppenprojekten lässt sich das REST-Backend als MVC
+# strukturieren (gleiche drei Rollen, aber ohne Observer):
+#   Controller = Route-Handler (z. B. POST /zug),
+#   View       = das, was zurückgeht (hier JSON – wie eine HTTP-Antwort),
+#   Model      = Domänenzustand (hier ein Brett, im Projekt die Datenbank).
+# Übertragbar ist die Trennung der Rollen, nicht die konkrete Model->View-Kopplung.
+
+class Schachbrett:
+    """MODEL: hält Figur + Position und benachrichtigt seine Views bei Änderung.
+
+    Die View-Liste IST der Observer-Mechanismus aus Abschnitt 5 – eine Liste
+    von Callables, die das Model nur aufruft, ohne ihren Typ zu kennen.
+    """
+
+    SPALTEN = "abcdefgh"
+
+    def __init__(self, figur: str = "K", feld: str = "e1") -> None:
+        self.figur = figur
+        self.feld = feld
+        self._views: list[Callable[["Schachbrett"], None]] = []
+
+    def registriere_view(self, view: Callable[["Schachbrett"], None]) -> None:
+        self._views.append(view)
+
+    def _benachrichtigen(self) -> None:
+        for view in self._views:
+            view(self)                       # Observer: einfach aufrufen
+
+    def setze_feld(self, feld: str) -> None:
+        self.feld = feld
+        self._benachrichtigen()              # Model -> alle Views automatisch
+
+
+def feld_zu_koordinaten(feld: str) -> tuple[int, int]:
+    """'e2' -> (4, 2): Spaltenindex 0–7 und Reihe 1–8."""
+    return Schachbrett.SPALTEN.index(feld[0]), int(feld[1:])
+
+
+def ascii_view(brett: Schachbrett) -> None:
+    """VIEW A: rendert den Modellzustand als ASCII-Brett (fürs Auge)."""
+    spalte, reihe = feld_zu_koordinaten(brett.feld)
+    for r in range(8, 0, -1):
+        felder = (brett.figur if (c == spalte and r == reihe) else "."
+                  for c in range(8))
+        print(f"  {r} " + " ".join(felder))
+    print("    " + " ".join(Schachbrett.SPALTEN))
+
+
+def json_view(brett: Schachbrett) -> None:
+    """VIEW B: rendert DENSELBEN Zustand als JSON – wie eine REST-Antwort."""
+    print("  " + json.dumps({"figur": brett.figur, "feld": brett.feld}))
+
+
+class Schachsteuerung:
+    """CONTROLLER: nimmt Kommandos entgegen, validiert sie, ändert das Model.
+
+    Im REST-Backend wäre 'ziehe' der Route-Handler hinter z. B. POST /zug.
+    """
+
+    def __init__(self, brett: Schachbrett) -> None:
+        self.brett = brett
+
+    def ziehe(self, feld: str) -> None:
+        if len(feld) < 2 or feld[0] not in Schachbrett.SPALTEN or not feld[1:].isdigit():
+            raise ValueError(f"Ungültiges Feld: {feld!r}")
+        if not 1 <= int(feld[1:]) <= 8:
+            raise ValueError(f"Reihe außerhalb des Bretts: {feld!r}")
+        self.brett.setze_feld(feld)          # Model ändern -> Views aktualisieren sich
+
+
+# -----------------------------------------------------------------------------
+# EXKURS 1 (BONUS): STRATEGY – FUNKTIONEN ALS FIRST-CLASS OBJEKTE
 # -----------------------------------------------------------------------------
 # Funktionen sind in Python ganz normale Werte – man übergibt sie wie
 # Strings oder Zahlen. Eine "Strategie" ist deshalb keine Klassenhierarchie,
@@ -259,14 +355,17 @@ class Warenkorb:
 
 
 # -----------------------------------------------------------------------------
-# 7. CONTEXT MANAGER – ZUVERLÄSSIGES AUFRÄUMEN MIT with
+# EXKURS 2 (BONUS): CONTEXT MANAGER – ZUVERLÄSSIGES AUFRÄUMEN MIT with
 # -----------------------------------------------------------------------------
 # Manche Operationen brauchen garantiertes Aufräumen – egal ob der Block
 # erfolgreich war oder eine Exception fliegt. Dateien schließen, Locks
 # freigeben, Zeit messen, Transaktionen abschließen, Mocks zurücknehmen.
 #
 # Pythons Antwort: jedes Objekt mit __enter__ und __exit__ darf hinter "with"
-# stehen. __exit__ läuft GARANTIERT – das ist der eigentliche Wert.
+# stehen. __exit__ läuft GARANTIERT, sobald __enter__ erfolgreich war – auch
+# bei Exceptions im Block. (Nur zwei Ausnahmen: scheitert schon __enter__,
+# gibt es kein __exit__; und ein harter Kill wie os._exit/SIGKILL führt
+# keinen Python-Code mehr aus.) Das ist der eigentliche Wert.
 
 class Zeitmessung:
     """Misst die Dauer eines with-Blocks – mit nur zwei Dunder-Methoden."""

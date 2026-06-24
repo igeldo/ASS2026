@@ -6,8 +6,30 @@
 > *Verbaler Bezug* (optionale Speaker-Notes, u. a. für die Frage *"Und in
 > Java?"*).
 >
-> **Zeitbudget gesamt: ~30 Minuten.**
-> Richtwert pro Abschnitt: 3–4 Minuten Inhalt + 30 Sekunden Atem/Wechsel.
+> **Zeitbudget gesamt: ~20 Minuten (Kern).**
+> Richtwert pro Kern-Abschnitt: 2–3 Minuten. Strategy und Context Manager
+> sind als **Exkurs/Bonus** angehängt – nur zeigen, falls am Ende Zeit ist.
+
+---
+
+## Zielzeit-Überblick (Kern = 20 Min)
+
+| Abschnitt | Inhalt | Zielzeit |
+|---|---|---|
+| Einstieg | Pattern-Definition, Norvig-These, Zen of Python | 2 Min |
+| 1 | Singleton (`__new__` + Modul/Decorator) | 3 Min |
+| 2 | Factory (explizit → Dict-Dispatch/`@classmethod`) | 3 Min |
+| 3 | Observer → **MVC** (Observer als Mechanismus, MVC-Demo) | 6 Min |
+| Abschluss | Tabelle + Frage | 2 Min |
+| Puffer | Übergänge, Atem, kurze Zwischenfragen | ~4 Min |
+| **Kern gesamt** | | **~20 Min** |
+| Exkurs 1 | Strategy (Bonus) | +2–3 Min |
+| Exkurs 2 | Context Manager (Bonus) | +3 Min |
+
+> **Plan für 20 Min:** Einstieg → Singleton → Factory → Observer/MVC →
+> Abschluss. **Wenn Zeit bleibt:** Exkurs Strategy, dann Context Manager.
+> Beide sind so geschnitten, dass man sie weglassen kann, ohne dass der
+> rote Faden reißt.
 
 ---
 
@@ -21,21 +43,26 @@ Vokabular. Wir schauen heute, wie sich das in der Praxis zeigt."*
 
 - Erinnerung: Gang of Four, 23 Patterns, drei Kategorien (Erzeugung,
   Struktur, Verhalten). Kurz, eine Folie reicht.
-- Peter Norvigs These zitieren: *"16 of 23 patterns are invisible or
-  simpler in dynamic languages."* (Norvig 1998.)
-- Was wir zeigen werden: 3 klassische Patterns (Singleton, Factory,
-  Observer) plus Strategy plus Context Manager. Jedes Mal *welcher Python-
-  Mechanismus trägt das Pattern* und *wann braucht man es nicht*.
+- Peter Norvigs These (Vortrag 1996, *"Design Patterns in Dynamic
+  Programming"*) **sinngemäß**: 16 der 23 GoF-Patterns sind in hinreichend
+  dynamischen Sprachen (Lisp/Dylan) einfacher oder ganz unsichtbar, weil
+  Typen und Funktionen dort first-class sind. (Nicht als wörtliches Zitat
+  bringen — die genaue Formulierung variiert je nach Quelle.)
+- Was wir zeigen werden: **Singleton, Factory, Observer** — und Observer
+  führt direkt zu **MVC**, dem Muster, das sich in euren Gruppenprojekten als
+  REST-Backend strukturieren lässt. Strategy und Context Manager als Bonus,
+  falls Zeit bleibt.
+- Roter Faden in jedem Abschnitt: *welcher Python-Mechanismus trägt das
+  Pattern* und *wann braucht man es nicht*.
 - Zen of Python kurz erwähnen: *"Schön ist besser als hässlich. Einfach
-  ist besser als komplex. Lesbarkeit zählt."* Diese drei Sätze rahmen den
-  ganzen Vortrag.
+  ist besser als komplex. Lesbarkeit zählt."*
 
 **Übergangssatz zum 1. Pattern:** *"Fangen wir mit dem berühmtesten Pattern
 an — und zeigen direkt, wo Pythons Mechanismen es klein machen."*
 
 ---
 
-## Abschnitt 1: Singleton – klassisch über `__new__` (3 Min)
+## Abschnitt 1: Singleton (3 Min)
 
 **Thesensatz:** *"Singleton ist eine Frage — und Python hat mit `__new__`
 eine direkte Antwort, und mit dem Modul-System eine noch elegantere."*
@@ -44,11 +71,34 @@ eine direkte Antwort, und mit dem Modul-System eine noch elegantere."*
 
 - Singleton = genau eine Instanz, global zugreifbar. Beispiele: Logger,
   Konfiguration, Verbindungspool.
-- Pythons Eingriffspunkt: die Dunder-Methode **`__new__`** — läuft *vor*
-  `__init__` und erzeugt das Objekt selbst.
-- Eine Klassen-Cache-Variable plus eine Eingriffspunkt-Methode reichen aus.
+- **Klassischer Weg:** die Dunder-Methode `__new__` — läuft *vor* `__init__`
+  und erzeugt das Objekt selbst. Eine Klassen-Cache-Variable plus die
+  Eingriffspunkt-Methode reichen aus.
+- **Pythonischer Weg:** Beim ersten Import führt Python den Modul-Code
+  **genau einmal** aus und legt das Modul in `sys.modules` ab; jeder weitere
+  Import gibt das gecachte Modul zurück, ohne den Code erneut auszuführen.
+  Die Modul-Variable existiert damit **einmal pro Prozess**.
+- **Wichtig beim Vorführen:** nicht nur zeigen, *dass* `konfiguration`
+  existiert — sondern dass zwei Zugriffswege **dasselbe Objekt** liefern
+  (`A is B -> True`) und eine Änderung an einer Stelle sofort an der anderen
+  sichtbar ist. Das ist der Beweis für "existiert nur einmal".
+- Ehrlich bleiben — was ist garantiert? Der Modul-Singleton garantiert *eine
+  geteilte Instanz, die alle importieren*, **nicht** dass die Klasse
+  uninstanziierbar wäre. Zwei Wege zu einem zweiten Objekt: **(a)**
+  `_Konfiguration()` von Hand aufrufen; **(b)** dieselbe Datei landet unter
+  *zwei Namen* in `sys.modules` — einmal als `__main__` (direkt mit `python
+  konfiguration.py` gestartet), einmal als `konfiguration` (von woanders
+  importiert). `sys.modules` wird nach dem Namen indiziert, nicht nach dem
+  Pfad → Python erkennt die Datei nicht wieder, führt sie zweimal aus, zwei
+  Instanzen. Wer die *Klasse* zum Verweigern zwingen will, nimmt `__new__`
+  oder den Decorator — deshalb gibt es alle drei Varianten.
+- Der `@singleton`-Decorator **erzwingt** die Einzigkeit (zweiter Aufruf,
+  andere Args → dasselbe Objekt), hat aber einen Preis: `Datenbankverbindung`
+  ist danach eine *Funktion*, keine Klasse — `isinstance(...)` und Vererbung
+  brechen, Args ab dem 2. Aufruf werden still ignoriert. Darum bleibt der
+  Modul-Singleton der Standardfall.
 
-**Zu zeigen (`modul5_entwurfsmuster.py`, Abschnitt 1):**
+**Zu zeigen (`modul5_entwurfsmuster.py`, Abschnitt 1+2):**
 
 ```python
 class LoggerJavaStil:
@@ -58,340 +108,198 @@ class LoggerJavaStil:
             cls._instanz = super().__new__(cls)
             cls._instanz.eintraege = []
         return cls._instanz
+
+konfiguration = _Konfiguration()   # <-- das Modul-Attribut IST der Singleton
 ```
 
 **Demo-Output (zeigen, nicht vorlesen):**
 
 ```
-logger_a is logger_b -> True
+logger_a is logger_b -> True          # __new__-Variante: ein Objekt
+Dasselbe Objekt?  A is B -> True      # Modul-Singleton: zwei Zugriffe, ein Objekt
+... Stelle B sieht jetzt: debug=True  # Änderung an A -> bei B sichtbar
+db1 is db2 -> True                    # @singleton erzwingt es
 ```
 
-**Wichtige Nebenbemerkung:**
-`__init__` läuft jedes Mal – wir initialisieren deshalb in `__new__` einmal,
-sonst überschreibt jeder Aufruf die Einträge.
+**Wichtige Nebenbemerkung:** `__init__` läuft jedes Mal – deshalb im
+`__new__` einmalig initialisieren. Threadsicher ist die `__new__`-Variante
+nicht ohne `threading.Lock()`; der Modul-Singleton schon.
 
-**Mögliche Zwischenfrage:** *"Ist das threadsicher?"* — Antwort: nicht ohne
-weiteres. Der GIL schützt einzelne Bytecode-Operationen, aber nicht die
-"check-then-act"-Sequenz. Lösung: `threading.Lock()`, oder gleich Modul-
-Singleton.
+**Kritische Bemerkung (ein Satz):** Singletons sind umstritten — globaler
+Zustand ist schwer testbar. Die Python-Devise: lieber explizit übergeben
+(*Dependency Injection*), nicht aus Reflex einsetzen.
 
-**Verbaler Bezug (Speaker-Note, optional):** Falls Vergleich gefragt wird —
-*"Klassisch-statische Sprachen lösen das mit privatem Konstruktor plus
-`getInstance()`. Python braucht den privaten Konstruktor gar nicht — der
-Eingriffspunkt ist `__new__`."*
-
-**Überleitung:** *"Funktioniert — aber Pythons Modul-System bringt es noch
-einfacher."*
-
----
-
-## Abschnitt 2: Singleton – Pythonisch (4 Min)
-
-**Thesensatz:** *"Pythons Modul-System ist bereits ein Singleton-
-Mechanismus. Wer Modul-Variablen verwendet, hat das Pattern ohne eine
-einzige Zeile Pattern-Code."*
-
-**Kernaussagen (Variante A – Modul-Singleton):**
-
-- Python cacht jedes Modul beim ersten Import. Variablen auf Modul-Ebene
-  existieren **genau einmal** im Prozess.
-- Praxis: einfach `from konfiguration import konfiguration` — fertig.
-- Das ist die **idiomatische** Antwort. Keine Klasse, keine Methode, kein
-  Pattern-Code im engeren Sinn.
-
-**Kernaussagen (Variante B – Decorator-Singleton):**
-
-- Wenn man die Singleton-Eigenschaft sichtbar dokumentieren möchte:
-  `@singleton` als Decorator — wiederverwendbar für *jede* Klasse.
-- Python-Detail erklären: `@singleton` ist syntaktischer Zucker für
-  `Datenbankverbindung = singleton(Datenbankverbindung)`.
-- Was zurückkommt, ist **keine Klasse mehr**, sondern eine Funktion, die
-  die Klasse "verwaltet". Für den Aufrufer bleibt der Aufruf identisch.
-
-**Zu zeigen:** beide Varianten parallel (`konfiguration` und
-`@singleton class Datenbankverbindung`).
-
-**Demo-Output:**
-
-```
-db1 is db2 -> True
-```
-
-**Kritische Bemerkung am Ende einbauen:**
-
-- Singletons sind in der Python-Community **umstritten**: globaler Zustand
-  ist schwer testbar.
-- Empfehlung der erfahrenen Python-Welt: lieber Abhängigkeit explizit
-  übergeben (*Dependency Injection*).
-- Singletons nicht aus Reflex einsetzen — die Frage *"brauche ich das
-  wirklich?"* gehört zur pythonischen Denkweise.
-
-**Verbaler Bezug (Speaker-Note, optional):** Falls jemand fragt, warum
-Python keine eigene Sprachsyntax für Singletons braucht — *"Weil das
-Modul-System es schon liefert. Das, was anderswo Pattern-Code ist, ist
-in Python eine Standardeigenschaft des Importsystems."*
+**Verbaler Bezug (Speaker-Note, optional):** *"Klassisch-statische Sprachen
+lösen das mit privatem Konstruktor plus `getInstance()`. Python braucht den
+privaten Konstruktor gar nicht — der Eingriffspunkt ist `__new__`, und das
+Modul-System macht es meist ganz überflüssig."*
 
 **Überleitung:** *"Vom 'gibt es genau eines' zum 'gib mir bitte eines vom
 Typ X' — das ist Factory."*
 
 ---
 
-## Abschnitt 3: Factory – explizit (3 Min)
+## Abschnitt 2: Factory (3 Min)
 
-**Thesensatz:** *"Eine Factory-Klasse mit `if/elif` funktioniert, wächst
-aber mit jeder neuen Variante. Die spannende Frage ist: muss sie wachsen?"*
+**Thesensatz:** *"Eine Factory mit `if/elif` funktioniert, wächst aber mit
+jeder Variante. In Python sind Klassen Objekte — also wird die Factory ein
+einzeiliger Lookup."*
 
 **Kernaussagen:**
 
-- Problem: Aufrufer kennt nur den Obertyp, will aber eine passende
-  konkrete Instanz.
-- Bestandteile: abstrakte Basisklasse (`abc.ABC` + `@abstractmethod`),
-  konkrete Klassen, Factory-Klasse mit Verzweigung.
-- Lesbar, aber Wartung wird mühsam: jede neue Tierart = ein neuer Zweig.
+- Problem: Aufrufer kennt nur den Obertyp, will aber eine passende konkrete
+  Instanz. Bestandteile: abstrakte Basisklasse (`abc.ABC` +
+  `@abstractmethod`), konkrete Klassen.
+- **Explizit:** Factory-Klasse mit `if/elif` — lesbar, aber jede neue
+  Tierart erzwingt einen neuen Zweig (bei 30 Arten → 30 Zweige).
+- **Pythonisch (Dict-Dispatch):** *"Klassen sind first-class Objekte"* —
+  in ein Dict legen, beim Erzeugen nachschlagen und aufrufen:
+  `_TIER_REGISTRY[art]()`.
+- **Der Beweis für den Vorteil (live zeigen!):** in der Demo registrieren wir
+  zur **Laufzeit** eine neue Art (`_TIER_REGISTRY["drache"] = Drache`) und
+  `erzeuge_tier("drache")` funktioniert sofort — **ohne dass `erzeuge_tier`
+  geändert wird**. Genau das ginge mit `if/elif` nicht (neuer Zweig im
+  Quelltext nötig). Open/Closed-Prinzip in einer Zeile.
+- **`@classmethod`-Factory:** wenn die Varianten zur Programmierzeit
+  feststehen — `Pizza.margherita()` liest sich wie Domänen-Vokabular.
 
-**Zu zeigen (`modul5_entwurfsmuster.py`, Abschnitt 3):**
+**Zu zeigen (`modul5_entwurfsmuster.py`, Abschnitt 3+4):**
 
 ```python
-class Tier(ABC):
-    @abstractmethod
-    def laut(self) -> str: ...
+_TIER_REGISTRY = {"hund": Hund, "katze": Katze, "kuh": Kuh}
 
-class TierFactoryJavaStil:
-    @staticmethod
-    def erzeuge(art):
-        if art == "hund":    return Hund()
-        elif art == "katze": return Katze()
-        ...
+def erzeuge_tier(art):
+    return _TIER_REGISTRY[art]()        # Klasse aus dem Dict aufrufen
+
+_TIER_REGISTRY["drache"] = Drache       # <-- neue Art zur Laufzeit, Factory unverändert
 ```
-
-**Was hier zu kritisieren ist:**
-
-- `if/elif`-Kette wächst mit jeder neuen Tierart.
-- Bei 30 Tierarten — 30 Zweige.
-- Beispiel im Demo: Fehlerfall `"drache"` löst `ValueError` aus.
-
-**Verbaler Bezug (Speaker-Note, optional):** Diese Art Factory ist der
-direkte Weg, den die meisten statisch-typisierten Sprachen ebenfalls
-nehmen würden. Wir zeigen sie hier vor allem als Kontrastfolie zum
-nächsten Abschnitt.
-
-**Übergangssatz:** *"Python kann das offensichtlich besser — weil Klassen
-in Python einfache Objekte sind."*
-
----
-
-## Abschnitt 4: Factory – Pythonisch (4 Min)
-
-**Thesensatz:** *"Wenn Klassen Objekte sind, kann ich sie in ein Dict
-stecken. Dann ist die Factory ein einzeiliger Lookup."*
-
-**Kernaussagen (Variante A – Dict-Dispatch):**
-
-- *"Klassen sind first-class Objekte"* — als zentralen Satz aussprechen.
-- Klasse in ein Dict legen, beim Erzeugen nachschlagen und aufrufen:
-  `_TIER_REGISTRY[art]()`.
-- Drei Vorteile gegenüber `if/elif`:
-  1. neue Tierart = eine neue Dict-Zeile, Factory-Funktion unverändert,
-  2. O(1)-Lookup statt O(n),
-  3. Plugins können sich nachträglich registrieren
-     (`_TIER_REGISTRY["drache"] = Drache`).
-
-**Kernaussagen (Variante B – `@classmethod`-Factory):**
-
-- Wenn die Varianten **schon zur Programmierzeit feststehen** und nur
-  *bequemer Konstruktor* gewollt ist: direkt in die Klasse.
-- Beispiel `Pizza.margherita()`, `Pizza.salami()` — liest sich wie der
-  Domänen-Wortschatz.
-
-**Zu zeigen:** `erzeuge_tier()` und `Pizza.margherita()`.
 
 **Demo-Output:**
 
 ```
-erzeuge_tier('hund') -> Hund('Wuff')
-Pizza.margherita()   -> Pizza(Tomate, Mozzarella, Basilikum)
+erzeuge_tier('hund')   -> Hund('Wuff')
+erzeuge_tier('drache') -> Drache('Feuer speien')   # zur Laufzeit dazugekommen
+Pizza.margherita()     -> Pizza(Tomate, Mozzarella, Basilikum)
 ```
 
-**Faustregel laut aussprechen:**
-
-- *String/Enum zur Laufzeit?* → Dict-Dispatch.
-- *Auswahl steht zur Programmierzeit fest?* → `@classmethod`.
+**Faustregel laut aussprechen:** *String/Enum zur Laufzeit?* → Dict-Dispatch.
+*Auswahl steht zur Programmierzeit fest?* → `@classmethod`.
 
 **Wo das in Python begegnet:** `dict.fromkeys`, `datetime.fromisoformat`,
 Plugin-Systeme mit `entry_points`.
 
-**Überleitung:** *"Bisher ging es um *Erzeugung* von Objekten. Jetzt zu
-Kommunikation zwischen Objekten — Observer."*
+**Überleitung:** *"Bisher ging es um *Erzeugung* von Objekten. Jetzt zur
+Kommunikation zwischen Objekten — und genau die brauchen wir gleich für MVC."*
 
 ---
 
-## Abschnitt 5: Observer (4 Min)
+## Abschnitt 3: Observer → MVC (6 Min)
+
+> **Das ist das Kernstück.** Observer wird kurz als Mechanismus eingeführt
+> (~2 Min) und dann sofort auf MVC angewendet (~4 Min). MVC ist der Grund,
+> warum dieser Abschnitt wichtig ist: er kommt in den Gruppenprojekten als
+> REST-Backend wieder.
+
+### Teil A – Observer (~2 Min)
 
 **Thesensatz:** *"Alles, was aufrufbar ist, ist ein Callable. Eine Liste
 von Callables ist alles, was ein Observer-Pattern in Python braucht."*
 
 **Kernaussagen:**
 
-- Begriff einführen: **Callable** — alles, was man mit `(...)` aufrufen
-  kann. Funktion, Lambda, gebundene Methode, Objekt mit `__call__`.
-- Newsletter hält eine Liste von Callables — kein gemeinsames Interface
-  nötig.
-- Demo zeigt drei Beobachter-Varianten:
-  1. normale Funktion (`auf_konsole`),
-  2. Lambda (`lambda s: archiv.append(s)`),
-  3. Objekt mit `__call__` (`ZaehlenderAbonnent`).
+- Begriff **Callable** — alles, was man mit `(...)` aufrufen kann: Funktion,
+  Lambda, gebundene Methode, Objekt mit `__call__`.
+- Subject (Newsletter) hält eine Liste von Callables — kein gemeinsames
+  Interface nötig. Veröffentlichen = die Callables der Reihe nach aufrufen.
 
 **Zu zeigen (`main_modul5.py`, Abschnitt 5):**
 
 ```python
 news.abonnieren(auf_konsole)
-news.abonnieren(archivieren)         # Lambda
-news.abonnieren(zaehler)             # Objekt mit __call__
+news.abonnieren(lambda s: archiv.append(s))   # Lambda
+news.abonnieren(zaehler)                       # Objekt mit __call__
 news.veroeffentlichen("Ausgabe Mai 2026")
 ```
 
-**Demo-Output:**
+**Kernsatz für den Übergang:** *"Diese eine Idee — ein Objekt hält eine
+Liste von Beobachtern und ruft sie bei Änderung auf — ist das Rückgrat von
+MVC."*
+
+### Teil B – MVC (~4 Min)
+
+**Thesensatz:** *"MVC trennt drei Verantwortlichkeiten — Zustand,
+Darstellung, Steuerung. In der klassischen Variante trägt das eben gezeigte
+Observer-Pattern die Kopplung Model → View."*
+
+**Kernaussagen (kurz halten — MVC kennt ihr schon):**
+
+- **Model** = Zustand + Fachlogik. **View** = Darstellung. **Controller** =
+  nimmt Eingaben, ändert das Model.
+- **In dieser Demo (klassisches/GUI-MVC, "push"):** Das Model hält eine Liste
+  von Views (= Observer) und ruft sie bei Änderung auf. Es kennt seine Views
+  **nicht im Detail** — nur, dass sie aufrufbar sind. Eine Modelländerung →
+  alle Views aktualisieren sich von selbst; eine dritte View kommt ohne eine
+  Zeile Model-Änderung dazu.
+- **Wichtige Abgrenzung (sonst entsteht ein Trugschluss):** Ein REST-Backend
+  ist **Web-MVC ("pull")** — eine HTTP-Anfrage löst alles aus, der Controller
+  baut die Antwort **selbst** zusammen, **kein Observer im Spiel**. Nicht
+  sagen "REST *ist* MVC" und nicht behaupten, im Flask-Projekt stecke ein
+  Observer — tut es nicht. Übertragbar ist die **Trennung der drei Rollen**.
+- **Brücke zu den Projekten (laut sagen!):** die Rollen bleiben dieselben —
+  - **Controller** = Route-Handler (z. B. `POST /zug`),
+  - **View** = die Antwort, die zurückgeht (hier JSON — wie eine HTTP-Antwort),
+  - **Model** = Domänenzustand (hier ein Brett, im Projekt die Datenbank).
+
+**Zu zeigen (`modul5_entwurfsmuster.py`/`main_modul5.py`, Abschnitt 6):**
+
+```python
+class Schachbrett:                       # MODEL
+    def setze_feld(self, feld):
+        self.feld = feld
+        self._benachrichtigen()          # ruft alle Views auf (= Observer)
+
+brett.registriere_view(ascii_view)       # VIEW fürs Auge
+brett.registriere_view(json_view)        # VIEW als REST-Antwort
+
+steuerung = Schachsteuerung(brett)       # CONTROLLER
+steuerung.ziehe("e2")                    # ein Aufruf -> beide Views reagieren
+```
+
+**Demo-Output (live laufen lassen — das ist der Wow-Moment):**
 
 ```
-Newsletter(Abonnenten=3)
-[Konsole]   Ausgabe Mai 2026
-Archiv:  ['Ausgabe Mai 2026', 'Sonderausgabe']
-Zähler:  ZaehlenderAbonnent(Statistik, empfangen=2)
+Controller: ziehe nach e2  ->  beide Views reagieren:
+  8 . . . . . . . .
+  ...
+  2 . . . . K . . .
+  1 . . . . . . . .
+    a b c d e f g h
+  {"figur": "K", "feld": "e2"}
 ```
+
+→ **Ein** Controller-Aufruf, **zwei** Views aktualisieren sich automatisch.
+Der Fehlerfall `ziehe("z9")` zeigt: der Controller validiert, bevor er das
+Model ändert.
 
 **Was sich pädagogisch anbietet zu sagen:**
 
-- Das ist **Observer + Duck Typing** zusammen.
-- Drei völlig unterschiedliche Beobachter, verbunden allein durch die
-  Eigenschaft "aufrufbar".
+- In der *klassischen* Variante ist Observer das Werkzeug, das MVCs
+  Model→View-Kopplung trägt — Pattern auf zwei Abstraktionsebenen.
+- Die JSON-View ist bewusst gewählt: genau so sieht eine REST-Antwort aus.
 
-**Verbaler Bezug (Speaker-Note, optional):** Statisch-typisierte Sprachen
-brauchen für genau diesen Fall ein Listener-Interface plus eine
-Implementierungsklasse pro Beobachter. Python überspringt das.
+**Verbaler Bezug (Speaker-Note, optional):** MVC ist sprachunabhängig — ihr
+kennt es aus früheren Kursen. Neu ist hier nur, **wie billig** Python die
+(klassische) Model→View-Kopplung macht: eine Liste von Callables, kein
+Listener-Interface.
 
-**Wo das in Python begegnet:** `signal.signal(SIGINT, handler)`, GUI-
-Bibliotheken wie `tkinter`/`PyQt`, Signal-Frameworks wie `blinker`.
+**Wo das in Python begegnet:**
+- **GUI** (`tkinter`, `PyQt`): klassisches MVC mit Observer — wie die Demo.
+- **Flask / FastAPI / Django** (Request → Controller → Response): Web-MVC,
+  gleiche Rollen, **ohne** Observer.
 
-**Überleitung:** *"Wenn Funktionen Beobachter sein können — können sie
-auch Strategien sein."*
-
----
-
-## Abschnitt 6: Strategy (3 Min)
-
-**Thesensatz:** *"Strategy ist in Python so unsichtbar geworden, dass
-keiner es mehr Pattern nennt — wir nennen es einfach 'Funktion
-übergeben'."*
-
-**Kernaussagen:**
-
-- Eine Strategie ist eine Funktion. Eine parametrisierte Strategie ist
-  eine Funktion, die eine Funktion zurückgibt — eine **Closure**.
-- `prozent_rabatt(10)` gibt eine *Funktion* zurück, die den Wert `10`
-  "behält". Pythons Antwort auf eine parametrisierte Strategie-Klasse —
-  ohne Klasse.
-- Strategie zur Laufzeit austauschen: einfach Attribut neu zuweisen.
-
-**Zu zeigen:**
-
-```python
-korb = Warenkorb(prozent_rabatt(10))
-korb.strategie = prozent_rabatt(20)          # zur Laufzeit wechseln
-```
-
-**Wo das in der Standardbibliothek begegnet (kurz erwähnen):**
-
-```python
-sorted(personen, key=lambda p: p.alter)       # Strategie als key
-threading.Thread(target=mein_job)             # Strategie = was getan wird
-heapq.nlargest(5, daten, key=...)             # ebenfalls Strategie
-```
-
-- *"Jedes `key=`-Argument ist im Kern ein Strategy."*
-
-**Verbaler Bezug (Speaker-Note, optional):** Sprachen ohne first-class
-Funktionen brauchen für das gleiche Pattern ein Interface plus eine
-Klasse pro Strategie.
-
-**Überleitung:** *"Letztes Pattern — und das einzige, für das Python ein
-eigenes Sprachmittel mitbringt, das so allgemein ist wie in kaum einer
-anderen Sprache: der Context Manager."*
-
----
-
-## Abschnitt 7: Context Manager (4 Min)
-
-**Thesensatz:** *"`with` ist Pythons allgemeiner Mechanismus für 'jetzt
-etwas tun, danach garantiert aufräumen'. Datei-Handling ist nur das
-bekannteste Beispiel."*
-
-**Kernaussagen:**
-
-- Problem: garantiert aufräumen, auch bei Exceptions. Datei, Lock,
-  Transaktion, Zeitmessung, Mock im Test, temporäres Verzeichnis.
-- Jedes Objekt mit `__enter__` und `__exit__` passt hinter `with`.
-- `__exit__` läuft **garantiert** — das ist der eigentliche Wert.
-
-**Zu zeigen – Variante A (Klasse):**
-
-```python
-class Zeitmessung:
-    def __enter__(self): ...
-    def __exit__(self, exc_typ, exc_wert, exc_tb): ...
-
-with Zeitmessung("Berechnung") as m:
-    ...
-```
-
-- `__exit__` bekommt 3 Argumente (Typ/Wert/Traceback der Exception oder
-  jeweils `None`).
-- Rückgabewert `True` würde die Exception unterdrücken. Standard: `False`.
-
-**Zu zeigen – Variante B (`@contextmanager`):**
-
-```python
-from contextlib import contextmanager
-
-@contextmanager
-def transaktion(name):
-    print("[TX] beginnt")
-    try:
-        yield name
-        print("[TX] COMMIT")
-    except Exception as fehler:
-        print("[TX] ROLLBACK")
-        raise
-```
-
-- `yield` trennt Setup (`__enter__`) von Teardown (`__exit__`).
-- Bei Exception: springt in `except` der Generator-Funktion.
-
-**Demo-Output (besonders der Fehlerfall ist eindrucksvoll):**
-
-```
-[TX] 'Buchung 43' beginnt
-[TX] 'Buchung 43' ROLLBACK wegen: Konto gesperrt
-Aufrufer fängt: Konto gesperrt
-```
-
-→ `__exit__` läuft **garantiert**, der Aufrufer kann die Exception
-trotzdem behandeln.
-
-**Eingebaute Context Manager auflisten (3 Beispiele reichen):**
-
-```python
-with open("a.txt") as f: ...
-with threading.Lock(): ...
-with mock.patch("modul.funktion"): ...
-```
-
-**Kernbotschaft:** `with` ist **allgemeines Sprachmittel** für Setup-
-Teardown-Strukturen — Datei-Handling ist nur ein Spezialfall davon.
-
-**Verbaler Bezug (Speaker-Note, optional):** Andere Sprachen haben oft
-ein eingeschränktes Pendant (z. B. `try-with-resources`), das nur fürs
-Schließen gemacht ist. Pythons Variante ist verallgemeinert: Zeit­messung,
-Mocks, Verzeichnisse, Transaktionen — alles passt rein.
+**Überleitung zum Abschluss:** *"Drei Patterns, ein wiederkehrendes Muster:
+finde den Python-Mechanismus, der das Pattern trägt — dann benutze ihn
+direkt."*
 
 ---
 
@@ -408,52 +316,98 @@ Pattern? — dann benutze ihn direkt."*
 | Singleton | Modul-System, `__new__` | Modul-Attribut |
 | Factory | Klassen als first-class Objekte | Dict-Dispatch, `@classmethod` |
 | Observer | Callables, `__call__` | Liste von Callbacks |
-| Strategy | Funktionen als first-class Werte | Funktion als Argument |
-| Context Manager | `__enter__`/`__exit__`, `@contextmanager` | `with`, vielseitig |
+| MVC | Observer + Trennung der Zuständigkeiten | Model benachrichtigt Views |
 
 **Wiederkehrende Werkzeuge laut aussprechen:** first-class Funktionen,
 first-class Klassen, Modul-System, Dunder-Methoden, Decorators.
 
-**Mögliche Nächste-Schritte-Folie:**
+**Brücke zu den Projekten:** *"MVC nehmt ihr direkt mit ins Gruppenprojekt —
+Controller = Endpoint, View = JSON-Antwort, Model = euer Datenbestand."*
 
-- Modul 6 (Fehlerbehandlung) baut direkt auf Context Manager auf.
-- Modul 7 (typing/Protokolle) liefert die typtechnische Antwort darauf,
-  wenn man strukturelle Schnittstellen explizit haben möchte.
+**Schlussgeste / Diskussionseröffnung:** *"An welcher Stelle in eurem
+Backend-Entwurf wird MVC euch die meiste Arbeit sparen?"*
 
-**Schlussgeste:** Frage an die Hörer: *"An welcher Stelle in eurem
-letzten Java-Projekt hättet ihr lieber einen pythonischen Mechanismus
-gehabt?"* — eröffnet die Diskussion.
+**Falls noch Zeit ist:** *"Ich habe noch zwei kurze Exkurse — Strategy und
+Context Manager — falls ihr mögt."* → siehe unten.
 
 ---
 
-## Pacing-Übersicht
+## Exkurs 1 (Bonus): Strategy (2–3 Min)
 
-| Abschnitt | Inhalt | Zielzeit |
-|---|---|---|
-| Einstieg | Pattern-Definition, Norvig-These, Zen of Python | 2 Min |
-| 1 | Singleton via `__new__` | 3 Min |
-| 2 | Singleton Pythonisch (Modul + Decorator) | 4 Min |
-| 3 | Factory explizit | 3 Min |
-| 4 | Factory Pythonisch | 4 Min |
-| 5 | Observer | 4 Min |
-| 6 | Strategy | 3 Min |
-| 7 | Context Manager | 4 Min |
-| Abschluss | Tabelle + Frage | 2 Min |
-| **Gesamt** | | **29 Min** |
+> Nur zeigen, falls nach dem Abschluss noch Zeit ist.
 
-**Puffer-Plan, falls die Zeit knapp wird:**
+**Thesensatz:** *"Strategy ist in Python so unsichtbar geworden, dass keiner
+es mehr Pattern nennt — wir nennen es einfach 'Funktion übergeben'."*
 
-- Abschnitt 1 (Singleton via `__new__`) **kürzen** — das Pattern selbst
-  ist schnell erklärt, die Modul-Variante in Abschnitt 2 ist die
-  eigentlich pythonische Aussage.
-- Demo-Output in Abschnitt 7 weglassen, nur den Fehlerfall mündlich
-  beschreiben.
+**Kernaussagen:**
 
-**Falls Zeit übrig ist:**
+- Eine Strategie ist eine Funktion. Eine parametrisierte Strategie ist eine
+  Funktion, die eine Funktion zurückgibt — eine **Closure**.
+- `prozent_rabatt(10)` gibt eine *Funktion* zurück, die den Wert `10`
+  behält. Strategie zur Laufzeit austauschen = Attribut neu zuweisen.
 
-- Decorator-Registrierung als Bonus zur Factory zeigen (siehe Lehrbuch 5.2).
-- Eingebaute Context-Manager-Beispiele länger demonstrieren
-  (`tempfile.TemporaryDirectory`, `mock.patch`).
+**Zu zeigen:**
+
+```python
+korb = Warenkorb(prozent_rabatt(10))
+korb.strategie = prozent_rabatt(20)          # zur Laufzeit wechseln
+```
+
+**Wo das begegnet (ein Satz):** `sorted(key=…)`, `threading.Thread(target=…)`,
+`map(funktion, …)` — *"jedes `key=`-Argument ist im Kern ein Strategy."*
+
+---
+
+## Exkurs 2 (Bonus): Context Manager (3 Min)
+
+> Nur zeigen, falls noch Zeit ist. Der Fehlerfall (ROLLBACK) ist der
+> eindrucksvollste Teil — falls die Zeit ganz knapp ist, nur den mündlich
+> beschreiben.
+
+**Thesensatz:** *"`with` ist Pythons allgemeiner Mechanismus für 'jetzt
+etwas tun, danach garantiert aufräumen'. Datei-Handling ist nur das
+bekannteste Beispiel."*
+
+**Kernaussagen:**
+
+- Jedes Objekt mit `__enter__` und `__exit__` passt hinter `with`.
+  `__exit__` läuft **garantiert, sobald `__enter__` erfolgreich war** — auch
+  bei Exceptions. (Ehrlichkeits-Fußnote, falls gefragt: scheitert schon
+  `__enter__`, gibt es kein `__exit__`; ein harter Kill wie `SIGKILL`/`os._exit`
+  führt ohnehin keinen Code mehr aus.)
+- `@contextmanager` macht aus einer Generator-Funktion mit einem `yield`
+  einen Context Manager: alles vor `yield` = Setup, alles danach = Teardown.
+
+**Zu zeigen – beide Varianten kurz:**
+
+```python
+with Zeitmessung("Berechnung") as m:
+    ...
+print(f"Dauer: {m.dauer_ms:.2f} ms")
+
+@contextmanager
+def transaktion(name):
+    try:
+        yield name
+        print("[TX] COMMIT")
+    except Exception:
+        print("[TX] ROLLBACK")
+        raise
+```
+
+**Demo-Output (der Fehlerfall ist eindrucksvoll):**
+
+```
+[TX] 'Buchung 43' beginnt
+[TX] 'Buchung 43' ROLLBACK wegen: Konto gesperrt
+Aufrufer fängt: Konto gesperrt
+```
+
+→ `__exit__` läuft **garantiert**, der Aufrufer kann die Exception trotzdem
+behandeln.
+
+**Wo das begegnet:** `open()`, `threading.Lock()`, `mock.patch()`,
+`tempfile.TemporaryDirectory()`.
 
 ---
 
@@ -461,25 +415,27 @@ gehabt?"* — eröffnet die Diskussion.
 
 | Frage | Kurze Antwort |
 |---|---|
-| *Sind Singletons threadsicher?* | Nicht ohne weiteres. Modul-Singleton ist sicher, weil das Importsystem die Initialisierung serialisiert; `__new__`-Variante braucht `threading.Lock()`. |
-| *Wann nehme ich Dict-Dispatch, wann `@classmethod`?* | Laufzeit-Auswahl per String → Dict. Programmierzeit-Auswahl → `@classmethod`. |
-| *Was ist mit Lambdas mit mehreren Zeilen?* | Geht in Python nicht direkt — stattdessen normale Funktion definieren und übergeben. |
-| *Sind `@contextmanager`-Funktionen langsamer als Klassen?* | Marginaler Overhead, in der Praxis irrelevant. Lesbarkeit gewinnt. |
-| *Warum kein Builder?* | Python hat Keyword-Argumente und Default-Werte — Builder ist meistens überflüssig. |
-| *Was ist mit Abstract Factory?* | Dieselbe Logik wie Factory, nur mit Familien von Klassen. Dict-Dispatch mit verschachtelten Dicts. |
-| *Und in Java?* | Knappe Antwort: die meisten dieser Patterns brauchen dort eigenes Boilerplate — Interfaces, statische Methoden, Initialisierungsklassen. Genau diesen Boilerplate spart Python ein. |
+| *Ist das jetzt Observer oder MVC?* | Observer ist der Mechanismus (Liste von Callables). MVC ist das größere Muster; in der *klassischen* Variante nutzt es Observer für die Model→View-Kopplung. |
+| *Wie wird MVC zum REST-Backend?* | Gleiche drei Rollen: Controller = Route-Handler, View = JSON-Antwort, Model = Domänenzustand/DB. **Aber:** Web-MVC ist pull-basiert — der Controller baut die Antwort pro Request selbst, **kein Observer**. Nur die Rollentrennung überträgt sich, nicht die Benachrichtigung. |
+| *Wo steckt der Observer in meinem Flask-Projekt?* | Nirgends — und das ist korrekt. Observer ist die GUI-/Live-Variante. REST ist Request→Response ohne Benachrichtigung. |
+| *Sind Singletons threadsicher?* | Modul-Singleton ja (Import serialisiert); `__new__`-Variante braucht `threading.Lock()`. |
+| *Wann Dict-Dispatch, wann `@classmethod`?* | Laufzeit-Auswahl per String → Dict. Programmierzeit-Auswahl → `@classmethod`. |
+| *Warum kennt Python kein Listener-Interface?* | Braucht es nicht — Duck Typing: alles Aufrufbare ist ein gültiger Observer. |
+| *Und in Java?* | Die meisten dieser Patterns brauchen dort Boilerplate — Interfaces, statische Methoden, Listener-Klassen. Genau den spart Python ein. |
 
 ---
 
 ## Persönliche Hinweise zum Üben
 
 - **Vor dem Vortrag mindestens einmal `python main_modul5.py` laufen
-  lassen** und den Output lesen — das prägt sich besser ein als Folien.
-- *"first-class"* ist der zentrale Begriff — beim Üben absichtlich oft
-  verwenden, damit er sich festsetzt.
-- Bei *"Wo begegnet einem das in Python?"*-Stellen: ein konkretes Beispiel
-  aus der Standardbibliothek pro Pattern parat haben, dann wirkt der
-  Vortrag verankert statt theoretisch.
-- Wenn eine Frage kommt, deren Antwort man nicht weiß: ehrlich sagen
-  *"Das schaue ich nach"* — nicht raten. Wir haben gerade ein Pattern-Modul
-  gegeben, in dem Klarheit das wichtigste Argument war.
+  lassen** und den Output lesen — besonders den MVC-Abschnitt, der ist der
+  Höhepunkt.
+- *"first-class"* und *"Mechanismus, der das Pattern trägt"* sind die
+  zentralen Begriffe — absichtlich oft verwenden.
+- Beim MVC-Teil **nicht** in eine MVC-Grundsatzvorlesung abdriften — das
+  kennt das Publikum. Fokus: *wie billig Python die Kopplung macht* und
+  *die Brücke zum REST-Projekt*.
+- 20-Minuten-Disziplin: Strategy/Context Manager sind Bonus. Lieber den
+  Kern ruhig zu Ende bringen als die Exkurse hetzen.
+- Bei einer Frage, deren Antwort man nicht weiß: ehrlich *"Das schaue ich
+  nach"* — nicht raten.

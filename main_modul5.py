@@ -17,17 +17,24 @@ from modul5_entwurfsmuster import (
     Datenbankverbindung,
     # Factory
     TierFactoryJavaStil,
+    Tier,
     erzeuge_tier,
+    _TIER_REGISTRY,
     Pizza,
     # Observer
     Newsletter,
     ZaehlenderAbonnent,
-    # Strategy
+    # MVC
+    Schachbrett,
+    Schachsteuerung,
+    ascii_view,
+    json_view,
+    # Strategy (Exkurs)
     Warenkorb,
     kein_rabatt,
     prozent_rabatt,
     fixer_rabatt,
-    # Context Manager
+    # Context Manager (Exkurs)
     Zeitmessung,
     transaktion,
 )
@@ -70,11 +77,29 @@ def demo_singleton_pythonisch() -> None:
     trennlinie("Abschnitt 2: Singleton – Modul-Singleton + @singleton")
 
     # Variante A: das Modul-Attribut IST der Singleton.
-    # "from modul5_entwurfsmuster import konfiguration" liefert immer dieselbe
-    # _Konfiguration-Instanz – das Modul-System cacht Imports beim ersten Zugriff.
-    print(f"Modul-Singleton:  {konfiguration}")
-    konfiguration.debug = True
-    print(f"Nach Änderung:    {konfiguration}")
+    # Der Beweis ist nicht "es existiert", sondern "es existiert nur EINMAL".
+    # Dazu simulieren wir zwei voneinander unabhängige Stellen im Programm:
+    import sys
+    import modul5_entwurfsmuster as modul          # Stelle A: ganzes Modul
+    konfig_stelle_a = modul.konfiguration
+    konfig_stelle_b = konfiguration                # Stelle B: Top-Level-Import (Kopf der Datei)
+
+    # Beide Zugriffswege liefern DASSELBE Objekt – nicht nur ein gleiches.
+    print(f"Stelle A sieht: {konfig_stelle_a}")
+    print(f"Stelle B sieht: {konfig_stelle_b}")
+    print(f"Dasselbe Objekt?  A is B -> {konfig_stelle_a is konfig_stelle_b}")
+
+    # Folge: eine Änderung an Stelle A ist sofort an Stelle B sichtbar –
+    # es gibt schlicht nur EIN Objekt im ganzen Prozess.
+    print("\nStelle A setzt debug = True ...")
+    konfig_stelle_a.debug = True
+    print(f"... Stelle B sieht jetzt: {konfig_stelle_b}")
+
+    # Warum nur einmal? Beim ersten Import führt Python den Modul-Code GENAU
+    # EINMAL aus (dabei läuft 'konfiguration = _Konfiguration()') und legt das
+    # Modulobjekt in sys.modules ab. Jeder weitere Import findet es dort und
+    # führt den Code NICHT erneut aus – die Instanz entsteht nie ein zweites Mal.
+    print(f"\nModul in sys.modules gecacht? -> {'modul5_entwurfsmuster' in sys.modules}")
 
     # Variante B: zweimal @singleton-dekorierte Klasse aufrufen.
     # Der Decorator hält die einzige Instanz in einem Dict fest und gibt sie
@@ -126,6 +151,20 @@ def demo_factory_pythonisch() -> None:
         tier = erzeuge_tier(art)
         print(f"  erzeuge_tier({art!r:8}) -> {tier}")
 
+    # Der eigentliche Gewinn gegenüber if/elif zeigt sich erst HIER: eine neue
+    # Art kommt zur LAUFZEIT dazu – mit einer einzigen Registry-Zeile, ohne dass
+    # erzeuge_tier angefasst wird. (In Abschnitt 3 wäre dafür ein neuer
+    # if/elif-Zweig im Quelltext nötig gewesen.)
+    print("\nNeue Art zur Laufzeit registrieren:")
+
+    class Drache(Tier):
+        def laut(self) -> str:
+            return "Feuer speien"
+
+    _TIER_REGISTRY["drache"] = Drache               # genau eine Zeile genügt
+    print(f"  erzeuge_tier('drache') -> {erzeuge_tier('drache')}")
+    print("  -> erzeuge_tier() selbst blieb dabei unverändert.")
+
     # Variante B: @classmethod als alternativer Konstruktor.
     # Die Erzeugungslogik wohnt direkt in der Klasse; Aufruf liest sich wie
     # Domänen-Vokabular.
@@ -167,14 +206,55 @@ def demo_observer() -> None:
     print(f"\nArchiv:  {nachrichten_archiv}")
     print(f"Zähler:  {zaehler}")
     # Drei völlig unterschiedliche Abonnenten – verbunden allein durch die
-    # Eigenschaft, aufrufbar zu sein.
+    # Eigenschaft, aufrufbar zu sein. Genau dieser Mechanismus trägt gleich MVC.
 
 
 # -----------------------------------------------------------------------------
-# 6. STRATEGY – FUNKTIONEN ALS FIRST-CLASS OBJEKTE
+# 6. MVC – MODEL / VIEW / CONTROLLER (BAUT AUF OBSERVER AUF)
+# -----------------------------------------------------------------------------
+def demo_mvc() -> None:
+    trennlinie("Abschnitt 6: MVC – Model, View, Controller")
+
+    # MODEL: hält den Zustand (eine Figur auf einem Feld). Die View-Liste im
+    # Model IST der Observer-Mechanismus aus Abschnitt 5.
+    brett = Schachbrett(figur="K", feld="e1")
+
+    # Zwei VIEWS abonnieren DASSELBE Model: eine fürs Auge (ASCII), eine als
+    # JSON – so sähe die Antwort eines REST-Backends aus.
+    brett.registriere_view(ascii_view)
+    brett.registriere_view(json_view)
+
+    # CONTROLLER: vermittelt zwischen Eingabe und Model. Im Projekt ein
+    # Route-Handler (POST /zug); hier ein simpler Methodenaufruf.
+    steuerung = Schachsteuerung(brett)
+
+    print("Startaufstellung (König auf e1):")
+    ascii_view(brett)            # erste Darstellung anstoßen
+    json_view(brett)
+
+    # Ein einziger Controller-Aufruf – beide Views aktualisieren sich von selbst,
+    # weil das Model sie als Observer benachrichtigt.
+    print("\nController: ziehe nach e2  ->  beide Views reagieren:")
+    steuerung.ziehe("e2")
+
+    print("\nController: ziehe nach e4:")
+    steuerung.ziehe("e4")
+
+    # Fehlerfall: der Controller validiert die Eingabe, bevor er das Model ändert.
+    print("\nUngültiges Kommando:")
+    try:
+        steuerung.ziehe("z9")
+    except ValueError as fehler:
+        print(f"  ValueError: {fehler}")
+    # Kernaussage: Model, View und Controller sind entkoppelt. Eine zweite View
+    # (z. B. eine Web-Oberfläche) kommt ohne eine Zeile Model-Änderung dazu.
+
+
+# -----------------------------------------------------------------------------
+# EXKURS 1 (BONUS): STRATEGY – FUNKTIONEN ALS FIRST-CLASS OBJEKTE
 # -----------------------------------------------------------------------------
 def demo_strategy() -> None:
-    trennlinie("Abschnitt 6: Strategy – Funktionen als Argument")
+    trennlinie("Exkurs 1 (Bonus): Strategy – Funktionen als Argument")
 
     # Drei Strategien als Funktionen. prozent_rabatt(10) ist ein Aufruf, der
     # eine FUNKTION zurückgibt – eine Closure, die den Wert 10 mitschleppt.
@@ -203,13 +283,13 @@ def demo_strategy() -> None:
 
 
 # -----------------------------------------------------------------------------
-# 7. CONTEXT MANAGER – __enter__/__exit__ UND @contextmanager
+# EXKURS 2 (BONUS): CONTEXT MANAGER – __enter__/__exit__ UND @contextmanager
 # -----------------------------------------------------------------------------
 def demo_context_manager() -> None:
-    trennlinie("Abschnitt 7: Context Manager – with-Statement")
+    trennlinie("Exkurs 2 (Bonus): Context Manager – with-Statement")
 
     # Variante A: Klasse mit __enter__/__exit__ zur Zeitmessung.
-    # __exit__ läuft garantiert – auch bei Exceptions im Block.
+    # __exit__ läuft garantiert (sobald __enter__ durch ist) – auch bei Exceptions.
     with Zeitmessung("Liste aufbauen") as messung:
         summe = sum(i * i for i in range(100_000))
     print(f"  Ergebnis: {summe}")
@@ -239,11 +319,15 @@ def demo_context_manager() -> None:
 # if __name__ == "__main__" schützt Code vor Ausführung, wenn die Datei nur
 # als Modul importiert wird.
 if __name__ == "__main__":
+    # Kern der Präsentation (~20 Min)
     demo_singleton_klassisch()
     demo_singleton_pythonisch()
     demo_factory_explizit()
     demo_factory_pythonisch()
     demo_observer()
+    demo_mvc()
+
+    # Exkurs / Bonus – nur, falls am Ende noch Zeit ist
     demo_strategy()
     demo_context_manager()
 
