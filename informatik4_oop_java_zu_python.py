@@ -179,3 +179,51 @@ class AgeValidator:
             print("Invalid input: " + str(e))
         finally:
             print("end of operation")
+
+
+# Java-Äquivalent:
+# public class AgeNegativeError extends RuntimeException {
+#     public AgeNegativeError(String message) {
+#         super(message);
+#     }
+# }
+class AgeNegativeError(Exception):
+    pass
+
+
+# Java-Äquivalent:
+# import java.util.Scanner;
+#
+# public class AgeValidator2 {
+#     public void validateAge() {
+#         Scanner scanner = new Scanner(System.in);
+#         try {
+#             System.out.print("Enter your age: ");
+#             int age = Integer.parseInt(scanner.nextLine());
+#             if (age < 0) {
+#                 throw new AgeNegativeError("Age cannot be negative.");
+#             }
+#             System.out.println("Your age is: " + age);
+#         } catch (NumberFormatException e) {
+#             System.out.println("Invalid input: " + e.getMessage());
+#         } catch (AgeNegativeError e) {
+#             System.out.println("Invalid age: " + e.getMessage());
+#         } finally {
+#             System.out.println("end of operation");
+#         }
+#     }
+# }
+class AgeValidator2:
+
+    def validate_age(self):
+        try:
+            age = int(input("Enter your age: "))
+            if age < 0:
+                raise AgeNegativeError("Age cannot be negative.")
+            print("Your age is: " + str(age))
+        except ValueError as e:
+            print("Invalid input: " + str(e))
+        except AgeNegativeError as e:
+            print("Invalid age: " + str(e))
+        finally:
+            print("end of operation")

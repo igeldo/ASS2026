@@ -1,4 +1,4 @@
-from informatik4_oop_java_zu_python import NumberInputHandler, DivisionHandler, MultiErrorHandler, CatchAllHandler, AgeValidator
+from informatik4_oop_java_zu_python import NumberInputHandler, DivisionHandler, MultiErrorHandler, CatchAllHandler, AgeValidator, AgeValidator2
 
 if __name__ == "__main__":
     print("Wähle eine Klasse:")
@@ -7,8 +7,9 @@ if __name__ == "__main__":
     print("3 - MultiErrorHandler")
     print("4 - CatchAllHandler")
     print("5 - AgeValidator")
+    print("6 - AgeValidator2 (Custom Exception)")
 
-    choice = input("Eingabe (1-5): ")
+    choice = input("Eingabe (1-6): ")
 
     if choice == "1":
         NumberInputHandler().read_number()
@@ -20,5 +21,7 @@ if __name__ == "__main__":
         CatchAllHandler().calculate()
     elif choice == "5":
         AgeValidator().validate_age()
+    elif choice == "6":
+        AgeValidator2().validate_age()
     else:
         print("Ungültige Auswahl.")
