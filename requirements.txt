@@ -6,3 +6,6 @@ pillow
 requests
 pymupdf
 lxml
+factur-x
+pytest
+httpx
